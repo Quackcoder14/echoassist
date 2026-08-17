@@ -96,7 +96,7 @@ export default function ValidityBanner({ validity }) {
       <div
         className="card"
         style={{
-          padding: '24px',
+          padding: '32px 36px',
           background: isPassed
             ? 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(240,253,244,0.65) 100%)'
             : 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(254,242,242,0.65) 100%)',

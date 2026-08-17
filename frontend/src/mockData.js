@@ -278,13 +278,13 @@ export function generateMockSegments(duration = 6.0) {
  * Mock Model Evaluation Metrics
  */
 export const MOCK_METRICS = {
-  accuracy: 0.884,
-  macro_f1: 0.852,
+  accuracy: 0.811,
+  macro_f1: 0.624,
   per_class: {
-    normal: { precision: 0.91, recall: 0.89, f1: 0.90, support: 142 },
-    murmur: { precision: 0.86, recall: 0.88, f1: 0.87, support: 98 },
-    extrasystole: { precision: 0.84, recall: 0.79, f1: 0.81, support: 45 },
-    artifact: { precision: 0.88, recall: 0.85, f1: 0.86, support: 56 }
+    normal:       { precision: 0.797, recall: 0.855, f1: 0.825, support: 505 },
+    murmur:       { precision: 0.842, recall: 0.767, f1: 0.803, support: 481 },
+    extrasystole: { precision: 0.143, recall: 0.333, f1: 0.200, support: 3 },
+    artifact:     { precision: 0.571, recall: 0.800, f1: 0.667, support: 5 }
   },
   confusion_matrix_url: '/static/confusion_matrix.png'
 };

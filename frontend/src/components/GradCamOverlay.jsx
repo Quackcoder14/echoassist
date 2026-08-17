@@ -74,7 +74,7 @@ export default function GradCamOverlay({ file, predictedLabel }) {
         </div>
       </div>
 
-      <div className="card" style={{ padding: '20px 24px' }}>
+      <div className="card" style={{ padding: '28px 32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)' }}>
             Spectrogram Attention

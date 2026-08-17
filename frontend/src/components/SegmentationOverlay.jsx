@@ -8,7 +8,8 @@ const SEGMENT_CONFIG = {
     name: 'S1',
     laymanName: 'S1 ("Lub" Sound)',
     desc: 'Tricuspid & Mitral valves closing (ventricles start pumping)',
-    color: '#10B981',
+    color: '#10B981', // Original Emerald for text
+    barColor: '#D1FAE5', // Near-white Emerald for bar
     bg: 'rgba(16, 185, 129, 0.12)',
     border: 'rgba(16, 185, 129, 0.35)',
     pillClass: 'pill-green',
@@ -17,7 +18,8 @@ const SEGMENT_CONFIG = {
     name: 'Systole',
     laymanName: 'Systole (Pumping Phase)',
     desc: 'Ventricles contract, pushing blood to body & lungs',
-    color: '#F59E0B',
+    color: '#F59E0B', // Original Amber for text
+    barColor: '#FEF3C7', // Near-white Amber for bar
     bg: 'rgba(245, 158, 11, 0.12)',
     border: 'rgba(245, 158, 11, 0.35)',
     pillClass: 'pill-yellow',
@@ -26,7 +28,8 @@ const SEGMENT_CONFIG = {
     name: 'S2',
     laymanName: 'S2 ("Dub" Sound)',
     desc: 'Aortic & Pulmonic valves closing (end of contraction)',
-    color: '#0EA5E9',
+    color: '#0EA5E9', // Original Sky for text
+    barColor: '#E0F2FE', // Near-white Sky for bar
     bg: 'rgba(14, 165, 233, 0.12)',
     border: 'rgba(14, 165, 233, 0.35)',
     pillClass: 'pill-blue',
@@ -35,7 +38,8 @@ const SEGMENT_CONFIG = {
     name: 'Diastole',
     laymanName: 'Diastole (Refilling Phase)',
     desc: 'Heart muscle relaxes and refills with oxygenated blood',
-    color: '#8B5CF6',
+    color: '#8B5CF6', // Original Violet for text
+    barColor: '#EDE9FE', // Near-white Violet for bar
     bg: 'rgba(139, 92, 246, 0.12)',
     border: 'rgba(139, 92, 246, 0.35)',
     pillClass: 'pill-purple',
@@ -141,7 +145,7 @@ export default function SegmentationOverlay({ file, currentTime = 0, totalDurati
         )}
       </div>
 
-      <div className="card" style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="card" style={{ padding: '32px 36px', display: 'flex', flexDirection: 'column', gap: 24 }}>
         
         {/* Timeline Header Info */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -176,7 +180,9 @@ export default function SegmentationOverlay({ file, currentTime = 0, totalDurati
                   className={`seg-block ${name.toLowerCase()} ${isActive ? 'active' : ''}`}
                   style={{
                     width: `${widthPct}%`,
-                    backgroundColor: cfg.color,
+                    backgroundColor: cfg.barColor,
+                    borderRight: '1px solid #fff',
+                    opacity: 1, // Bar is already near-white, keep it fully opaque for clean look
                   }}
                   title={`${cfg.laymanName}: ${start.toFixed(2)}s to ${end.toFixed(2)}s`}
                 />

@@ -202,8 +202,8 @@ export default function ClassificationResult({ result, isPredicting, isPlayingAu
         )}
       </div>
 
-      <div className="card" style={{ padding: '24px 26px' }}>
-        <div className="grid-2col" style={{ gap: 24, alignItems: 'center' }}>
+      <div className="card" style={{ padding: '32px 36px' }}>
+        <div className="grid-2col" style={{ gap: 32, alignItems: 'center' }}>
 
           {/* Left Column: Predicted Label & Radial Confidence Arc */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -56,8 +56,8 @@ export default function MetricsPanel({ isOpen, onClose }) {
               <h2 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>
                 Model Evaluation & Validation Metrics
               </h2>
-              <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                Cross-validated benchmark on PhysioNet 2016 & PASCAL Heart Sound Challenge
+              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                Cross-validated benchmark on PhysioNet 2016, PASCAL & CirCor DigiScope 2022
               </p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function MetricsPanel({ isOpen, onClose }) {
               <div className="stat-tile">
                 <span className="stat-label">Test Cohort</span>
                 <div className="stat-value" style={{ color: 'var(--purple)' }}>
-                  479 <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}>files</span>
+                  994 <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}>files</span>
                 </div>
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function MetricsPanel({ isOpen, onClose }) {
                 <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>4x4 Normalized Matrix</span>
               </div>
 
-              <div style={{ background: '#000', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', padding: 18, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', padding: 18, display: 'flex', justifyContent: 'center', boxShadow: '0 4px 20px -4px rgba(37,99,235,0.05)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }} className="mono">
                   <div style={{ padding: 6, color: 'var(--text-3)', fontWeight: 600 }}>Pred →</div>
                   <div style={{ padding: 6, color: 'var(--green)', fontWeight: 600 }}>Norm</div>
@@ -149,29 +149,29 @@ export default function MetricsPanel({ isOpen, onClose }) {
                   <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 600 }}>Extra</div>
                   <div style={{ padding: 6, color: 'var(--red)', fontWeight: 600 }}>Artf</div>
 
-                  <div style={{ padding: 6, color: 'var(--green)', fontWeight: 600, textAlign: 'left' }}>Norm</div>
-                  <div style={{ padding: 8, background: 'rgba(10,132,255,0.7)', borderRadius: 4, color: '#fff', fontWeight: 700 }}>182</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>11</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>7</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>4</div>
+                  <div style={{ padding: 6, color: 'var(--green)', fontWeight: 700, textAlign: 'left' }}>Norm</div>
+                  <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>432</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>69</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>4</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
 
-                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 600, textAlign: 'left' }}>Murm</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>10</div>
-                  <div style={{ padding: 8, background: 'rgba(10,132,255,0.7)', borderRadius: 4, color: '#fff', fontWeight: 700 }}>124</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>5</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>3</div>
+                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 700, textAlign: 'left' }}>Murm</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>108</div>
+                  <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>369</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>1</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>3</div>
 
-                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 600, textAlign: 'left' }}>Extra</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>6</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>4</div>
-                  <div style={{ padding: 8, background: 'rgba(10,132,255,0.7)', borderRadius: 4, color: '#fff', fontWeight: 700 }}>52</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>2</div>
+                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 700, textAlign: 'left' }}>Extra</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>2</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
+                  <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>1</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
 
-                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 600, textAlign: 'left' }}>Artf</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>3</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>4</div>
-                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 4, color: 'var(--text-3)' }}>3</div>
-                  <div style={{ padding: 8, background: 'rgba(10,132,255,0.7)', borderRadius: 4, color: '#fff', fontWeight: 700 }}>61</div>
+                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 700, textAlign: 'left' }}>Artf</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
+                  <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>1</div>
+                  <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>4</div>
                 </div>
               </div>
             </div>

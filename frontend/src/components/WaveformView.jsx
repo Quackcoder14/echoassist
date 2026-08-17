@@ -364,7 +364,7 @@ export default function WaveformView({ file, onTimeUpdate, onPlayStateChange }) 
         </div>
       </div>
 
-      <div className="card" style={{ padding: '18px 20px' }}>
+      <div className="card" style={{ padding: '24px 28px' }}>
         {/* Time display */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)' }}>

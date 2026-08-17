@@ -1,0 +1,75 @@
+{
+  "accuracy": 0.8108651911468813,
+  "macro_f1": 0.623732089092313,
+  "report": {
+    "normal": {
+      "precision": 0.7970479704797048,
+      "recall": 0.8554455445544554,
+      "f1-score": 0.8252148997134671,
+      "support": 505.0
+    },
+    "murmur": {
+      "precision": 0.8424657534246576,
+      "recall": 0.7671517671517671,
+      "f1-score": 0.8030467899891186,
+      "support": 481.0
+    },
+    "extrasystole": {
+      "precision": 0.14285714285714285,
+      "recall": 0.3333333333333333,
+      "f1-score": 0.2,
+      "support": 3.0
+    },
+    "artifact": {
+      "precision": 0.5714285714285714,
+      "recall": 0.8,
+      "f1-score": 0.6666666666666666,
+      "support": 5.0
+    },
+    "accuracy": 0.8108651911468813,
+    "macro avg": {
+      "precision": 0.5884498595475192,
+      "recall": 0.6889826612598889,
+      "f1-score": 0.623732089092313,
+      "support": 994.0
+    },
+    "weighted avg": {
+      "precision": 0.8159164655686373,
+      "recall": 0.8108651911468813,
+      "f1-score": 0.8118031827700204,
+      "support": 994.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      432,
+      69,
+      4,
+      0
+    ],
+    [
+      108,
+      369,
+      1,
+      3
+    ],
+    [
+      2,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      4
+    ]
+  ],
+  "classes": [
+    "normal",
+    "murmur",
+    "extrasystole",
+    "artifact"
+  ]
+}
