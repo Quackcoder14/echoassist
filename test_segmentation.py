@@ -84,7 +84,7 @@ for rid in SPOT_CHECK_IDS:
             check_monotonic(segs, rid)
             check_labels(segs, rid)
             print(f"  [PASS] {rid}: {len(segs)} segments  "
-                  f"({segs[0][1]:.3f}s → {segs[-1][2]:.3f}s)")
+                  f"({segs[0][1]:.3f}s -> {segs[-1][2]:.3f}s)")
             # Print first 4 segments as a sanity preview
             for seg in segs[:4]:
                 print(f"         {seg}")

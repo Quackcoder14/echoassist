@@ -285,12 +285,11 @@ def _build_pascal_index(
     filename stem → sorted list of S1/S2 event sample indices.
 
     The PASCAL seg CSV has one row per recording, with the filename as the
-    first column and then an alternating sequence of S1, S2 sample indices
-    (the exact number of events varies per recording):
+    first column and then alternating S1, S2 sample indices:
 
         filename, S1_1, S2_1, S1_2, S2_2, ...
 
-    or may have a header row; we detect and skip it.
+    A header row is detected and skipped automatically.
     """
     csv_rel = _PASCAL_SEG_CSV.get(set_key)
     if csv_rel is None:
@@ -310,9 +309,10 @@ def _build_pascal_index(
             # Strip whitespace from every cell
             row = [c.strip() for c in row]
             filename_col = row[0]
-            # Skip header row if present (first cell is not a filename-like string)
-            if not filename_col or re.match(r"^[a-zA-Z_]+$", filename_col) and not re.search(r"\d", filename_col):
-                # Looks like a header word with no digits → skip
+            if not filename_col:
+                continue
+            # Skip header row: first cell has no digits (e.g. "filename", "recording")
+            if not re.search(r"\d", filename_col):
                 continue
             # Extract stem (strip extension if present)
             stem = Path(filename_col).stem
@@ -324,9 +324,11 @@ def _build_pascal_index(
                 if not cell:
                     continue
                 try:
-                    samples.append(int(float(cell)))
+                    val = int(float(cell))
+                    if val > 0:   # skip zero/negative padding
+                        samples.append(val)
                 except ValueError:
-                    pass  # ignore non-numeric trailing cells
+                    pass  # ignore non-numeric cells (header event labels etc.)
 
             if samples:
                 index[stem] = sorted(samples)
@@ -405,29 +407,50 @@ def _pascal_samples_to_segments(
 
 def _pascal_set_key_and_stem(recording_id: str) -> tuple[str, str]:
     """
-    Derive the PASCAL set key ('a' or 'b') and the filename stem from a
+    Derive the PASCAL set key ('a' or 'b') and the WAV filename stem from a
     recording_id.
 
-    Expected formats (produced by Ankit's preprocessing):
-        "pascal_setA_Atraining_normal_0001"  →  ('a', 'Atraining_normal_0001')
-        "pascal_setB_Btraining_normal_0023"  →  ('b', 'Btraining_normal_0023')
+    The actual ID format produced by Ankit's preprocessing is:
+        "pascal_setA_<category>_<wav_stem>"
+    e.g.
+        "pascal_setA_normal_anormal_01"      → ('a', 'anormal_01')
+        "pascal_setA_artifact_aartifact_02"  → ('a', 'aartifact_02')
+        "pascal_setB_normal_bnormal_03"      → ('b', 'bnormal_03')
+        "pascal_setB_normal_bnoisynormal_01" → ('b', 'bnoisynormal_01')
 
-    We also accept just "pascal_a_..." or "pascal_b_..." as shorter forms.
+    Strategy:
+      - Strip the leading "pascal_" prefix.
+      - Detect set key from "setA" / "setB" token.
+      - The WAV stem is identified as the last two underscore-separated tokens
+        joined (e.g. 'anormal' + '_' + '01' = 'anormal_01').
     """
-    tail = recording_id[len("pascal_"):]   # e.g. "setA_Atraining_normal_0001"
+    tail = recording_id[len("pascal_"):]   # e.g. "setA_normal_anormal_01"
     lower = tail.lower()
 
-    if lower.startswith("seta") or lower.startswith("a_") or lower.startswith("a-"):
+    if lower.startswith("seta"):
         set_key = "a"
-        # stem = everything after the set prefix token
-        stem = re.sub(r"^set[aA][_\-]?", "", tail).strip("_-")
-    elif lower.startswith("setb") or lower.startswith("b_") or lower.startswith("b-"):
+        rest = re.sub(r"^set[aA][_\-]", "", tail)   # "normal_anormal_01"
+    elif lower.startswith("setb"):
         set_key = "b"
-        stem = re.sub(r"^set[bB][_\-]?", "", tail).strip("_-")
+        rest = re.sub(r"^set[bB][_\-]", "", tail)   # "normal_bnormal_01"
+    elif lower.startswith("a_") or lower.startswith("a-"):
+        set_key = "a"
+        rest = tail[2:]
+    elif lower.startswith("b_") or lower.startswith("b-"):
+        set_key = "b"
+        rest = tail[2:]
     else:
-        # Fallback: assume the tail IS the stem and we can't determine the set
-        set_key = ""
-        stem = tail
+        return "", tail
+
+    # rest is: "<category>_<wav_stem>"  e.g. "normal_anormal_01"
+    # The wav_stem is everything AFTER the first token (category word).
+    # Category words are single tokens like: normal, murmur, artifact,
+    # extrasystole, extrahs  — they never contain digits.
+    parts = rest.split("_", 1)
+    if len(parts) == 2 and not re.search(r"\d", parts[0]):
+        stem = parts[1]   # e.g. "anormal_01"
+    else:
+        stem = rest       # fallback: use the whole thing
 
     return set_key, stem
 
@@ -444,7 +467,7 @@ def _load_pascal_segmentation(
 
     Parameters
     ----------
-    recording_id   : e.g. "pascal_setA_Atraining_normal_0001"
+    recording_id   : e.g. "pascal_setA_normal_anormal_01"
     annotation_dir : root of the raw data tree (e.g. "data/raw")
     """
     annotation_dir = Path(annotation_dir)
@@ -461,18 +484,21 @@ def _load_pascal_segmentation(
     if not samples:
         return []
 
-    # Try to read sample rate from the actual .wav file
+    # Try to read sample rate from the actual .wav file.
+    # WAVs live inside category subdirectories, so we do a recursive search.
     set_dir = annotation_dir / f"pascal/set{set_key.upper()}"
-    wav_candidates = [
-        set_dir / f"{stem}.wav",
-        set_dir / f"{stem}.aif",
-        set_dir / f"{stem}.aiff",
-    ]
     fs = _PASCAL_DEFAULT_FS
-    for wav_path in wav_candidates:
-        if wav_path.is_file():
+    if set_dir.is_dir():
+        # Search all subdirectories for stem.wav
+        for wav_path in set_dir.rglob(f"{stem}.wav"):
             fs = _get_pascal_wav_sample_rate(wav_path)
             break
+        else:
+            # Also try .aif / .aiff
+            for ext in (".aif", ".aiff"):
+                for wav_path in set_dir.rglob(f"{stem}{ext}"):
+                    fs = _get_pascal_wav_sample_rate(wav_path)
+                    break
 
     return _pascal_samples_to_segments(samples, fs)
 
