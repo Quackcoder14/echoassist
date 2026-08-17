@@ -1,2 +1,20 @@
-data/raw/echo data/processed/*.wav echo outputs/checkpoints/*.pt echo outputs/checkpoints/*.pth echo __pycache__/ echo *.pyc echo .ipynb_checkpoints/ echo .env echo venv/ 
-!data/raw/pascal/.gitkeep 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# Virtual environments
+.env
+venv/
+.venv/
+
+# Raw audio data (too large for git)
+data/raw/physionet2016/
+# Keep pascal placeholder
+!data/raw/pascal/.gitkeep
+
+# Model checkpoints
+outputs/checkpoints/*.pt
+outputs/checkpoints/*.pth
