@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Eye, Layers, Sparkles, ZoomIn, Info, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Layers, ZoomIn, Info, AlertCircle } from 'lucide-react';
 import { getGradcamImageUrl } from '../api';
+import { animate } from 'animejs';
 
 export default function GradCamOverlay({ file, predictedLabel }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const wrapRef = useRef(null);
+  const imgRef = useRef(null);
 
   useEffect(() => {
     if (!file) {
@@ -25,7 +28,7 @@ export default function GradCamOverlay({ file, predictedLabel }) {
           setIsLoading(false);
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (isMounted) {
           setError('Failed to generate Grad-CAM explainability heatmap.');
           setIsLoading(false);
@@ -37,79 +40,129 @@ export default function GradCamOverlay({ file, predictedLabel }) {
     };
   }, [file, predictedLabel]);
 
+  useEffect(() => {
+    if (wrapRef.current && imageUrl) {
+      animate(wrapRef.current, {
+        opacity: [0, 1],
+        translateY: [20, 0],
+        duration: 450,
+        ease: 'outCubic',
+      });
+    }
+  }, [imageUrl]);
+
+  const handleToggleZoom = () => {
+    setIsZoomed(!isZoomed);
+    if (imgRef.current) {
+      animate(imgRef.current, {
+        scale: isZoomed ? [1.05, 1] : [1, 1.05],
+        duration: 300,
+        ease: 'outCubic',
+      });
+    }
+  };
+
   return (
-    <div className="glass-card p-5 space-y-4">
-      {/* Title & Info */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Layers className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white tracking-wide">
-              Neural Explainability (Grad-CAM Spectrogram Attention)
-            </h3>
-            <p className="text-[11px] text-[var(--text-secondary)]">
-              Visualizes acoustic time-frequency coordinates that triggered classifier activation
-            </p>
-          </div>
+    <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: 12, opacity: 0 }}>
+      <div className="section-label">
+        <div className="step-badge" style={{ background: 'rgba(191,90,242,0.1)', borderColor: 'rgba(191,90,242,0.3)', color: 'var(--purple)' }}>
+          <Layers size={13} />
         </div>
-
-        {/* Grad-CAM Colormap Legend */}
-        <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
-          <span>Salience:</span>
-          <div className="w-16 h-2.5 rounded bg-gradient-to-r from-blue-900 via-emerald-400 to-red-500" />
-          <span className="text-red-400 font-bold">High Attention</span>
+        <div>
+          <h2>Neural Explainability (Grad-CAM)</h2>
+          <p>Time-frequency activation map revealing classifier feature salience</p>
         </div>
       </div>
 
-      {/* Spectrogram Image Display Container */}
-      <div className="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 min-h-[180px] flex items-center justify-center">
-        {isLoading && (
-          <div className="flex flex-col items-center gap-2 py-10 text-cyan-400 font-mono text-xs">
-            <div className="w-8 h-8 border-3 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin" />
-            <span>Computing Grad-CAM gradients over Mel-spectrogram...</span>
-          </div>
-        )}
+      <div className="card" style={{ padding: '20px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)' }}>
+            Spectrogram Attention
+          </span>
 
-        {error && (
-          <div className="flex items-center gap-2 text-xs text-rose-400 p-6">
-            <AlertCircle className="w-4 h-4" />
-            <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-3)' }}>
+            <span>Low</span>
+            <div style={{
+              width: 64,
+              height: 6,
+              borderRadius: 3,
+              background: 'linear-gradient(to right, #002244, #30D158, #FFD60A, #FF453A)',
+            }} />
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>High Salience</span>
           </div>
-        )}
+        </div>
 
-        {!isLoading && imageUrl && (
-          <div className="relative w-full group cursor-pointer" onClick={() => setIsZoomed(!isZoomed)}>
-            <img
-              src={imageUrl}
-              alt="Grad-CAM Spectrogram Heatmap"
-              className={`w-full object-cover transition-all duration-300 rounded-lg ${
-                isZoomed ? 'scale-105' : 'hover:brightness-105'
-              }`}
-              style={{ maxHeight: isZoomed ? '480px' : '260px' }}
-            />
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-md px-2 py-1 rounded text-[10px] text-slate-300 flex items-center gap-1 font-mono">
-              <ZoomIn className="w-3 h-3" /> {isZoomed ? 'Click to shrink' : 'Click to zoom'}
+        <div style={{
+          position: 'relative',
+          background: '#F1F5F9',
+          borderRadius: 'var(--r-lg)',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+          minHeight: 180,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {isLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 30, color: 'var(--text-3)', fontSize: 12 }}>
+              <div style={{ width: 24, height: 24, border: '2px solid var(--border)', borderTopColor: 'var(--purple)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span>Computing activation gradients over Mel-spectrogram...</span>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Clinical Traceability Explanation */}
-      <div className="flex items-start gap-2 bg-slate-900/50 p-3 rounded-lg border border-[var(--border-subtle)] text-xs text-slate-300">
-        <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-        <div className="space-y-1 text-[11px] leading-relaxed">
-          <span className="font-semibold text-slate-200">Clinical Decision Rationale: </span>
-          <span>
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 24, color: 'var(--red)', fontSize: 12 }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {!isLoading && imageUrl && (
+            <div style={{ position: 'relative', width: '100%', cursor: 'pointer' }} onClick={handleToggleZoom}>
+              <img
+                ref={imgRef}
+                src={imageUrl}
+                alt="Grad-CAM Mel Spectrogram Heatmap"
+                className={`gradcam-img ${isZoomed ? 'zoomed' : ''}`}
+                style={{ maxHeight: isZoomed ? 440 : 260, objectFit: 'contain' }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                background: 'rgba(255, 255, 255, 0.90)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid var(--border)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                padding: '4px 10px',
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--text-1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}>
+                <ZoomIn size={11} /> {isZoomed ? 'Click to collapse' : 'Click to expand'}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="note-block" style={{ marginTop: 16 }}>
+          <div className="note-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Info size={13} color="var(--blue)" />
+            <span>Clinical Decision Rationale</span>
+          </div>
+          <p style={{ marginTop: 2 }}>
             {predictedLabel === 'murmur'
-              ? 'Grad-CAM highlights elevated acoustic energy in the 200–500 Hz systolic region between S1 and S2, characteristic of turbulent flow across cardiac valves.'
+              ? 'Grad-CAM highlights elevated acoustic energy in the 200–500 Hz systolic region between S1 and S2, characteristic of turbulent blood flow across valves.'
               : predictedLabel === 'extrasystole'
               ? 'Grad-CAM highlights premature spectral pulse energy outside the baseline rhythm cycle, indicating ectopic ventricular contraction.'
               : predictedLabel === 'artifact'
-              ? 'Grad-CAM identifies widespread non-cardiac high-frequency sensor noise across all frequency bands.'
-              : 'Grad-CAM demonstrates focused attention strictly on the physiologic S1 and S2 impulse bands with clear systolic and diastolic silence.'}
-          </span>
+              ? 'Grad-CAM identifies non-cardiac high-frequency sensor friction noise spanning across all acoustic channels.'
+              : 'Grad-CAM demonstrates focused attention on physiological S1 and S2 impulse bands with systolic/diastolic baseline silence.'}
+          </p>
         </div>
       </div>
     </div>

@@ -61,7 +61,7 @@ app = FastAPI(
 # CORS — required so the Vite dev server (localhost:5173) can call this
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,14 +82,16 @@ _DEVICE: torch.device = None
 async def load_model():
     global _MODEL, _DEVICE
     _DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    _MODEL = HeartSoundCNN(num_classes=4).to(_DEVICE)
 
     if os.path.exists(_CHECKPOINT_PATH):
         ckpt = torch.load(_CHECKPOINT_PATH, map_location=_DEVICE)
+        num_classes = ckpt.get("num_classes", len(HeartSoundDataset.LABEL_MAP))
+        _MODEL = HeartSoundCNN(num_classes=num_classes).to(_DEVICE)
         _MODEL.load_state_dict(ckpt["model_state_dict"])
         _MODEL.eval()
-        print(f"[startup] Model loaded from {_CHECKPOINT_PATH} — device: {_DEVICE}")
+        print(f"[startup] Model loaded ({num_classes} classes) from {_CHECKPOINT_PATH} — device: {_DEVICE}")
     else:
+        _MODEL = HeartSoundCNN(num_classes=len(HeartSoundDataset.LABEL_MAP)).to(_DEVICE)
         _MODEL.eval()
         print(
             f"[startup] WARNING — no checkpoint found at {_CHECKPOINT_PATH}. "
@@ -240,16 +242,18 @@ async def gradcam_endpoint(file: UploadFile):
 @app.get("/segmentations/{recording_id}")
 async def get_segmentation(recording_id: str):
     """
-    Return pre-computed S1/S2 segmentation data for a recording.
-
-    Falls back to empty list if segmentations.json doesn't exist yet
-    (Chaitanya's output — may not be ready during dev).
+    Return pre-computed or estimated S1/S2 segmentation data for a recording.
     """
-    if not os.path.exists(_SEGMENTATIONS_PATH):
-        return {"segments": []}
-    with open(_SEGMENTATIONS_PATH) as f:
-        data = json.load(f)
-    return {"segments": data.get(recording_id, [])}
+    try:
+        from src.segmentation.s1s2_loader import get_segmentation_for_recording
+        segments = get_segmentation_for_recording(recording_id, json_path=_SEGMENTATIONS_PATH)
+        return {"segments": segments}
+    except Exception:
+        if not os.path.exists(_SEGMENTATIONS_PATH):
+            return {"segments": []}
+        with open(_SEGMENTATIONS_PATH) as f:
+            data = json.load(f)
+        return {"segments": data.get(recording_id, [])}
 
 
 @app.get("/metrics")

@@ -9,3 +9,6 @@ __pycache__/
 .env
 venv/
 !data/raw/pascal/.gitkeep
+training data/
+frontend/node_modules/
+frontend/dist/

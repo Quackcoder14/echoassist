@@ -59,7 +59,7 @@ class HeartSoundCNN(nn.Module):
         (before AdaptiveAvgPool). Grad-CAM hooks this tensor.
     """
 
-    def __init__(self, num_classes: int = 4):
+    def __init__(self, num_classes: int = 2):
         super().__init__()
         self.num_classes = num_classes
 

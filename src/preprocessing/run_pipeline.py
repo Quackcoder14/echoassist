@@ -36,7 +36,10 @@ from preprocessing.resample import resample_audio
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-RAW_PHYSIONET_DIR = PROJECT_ROOT / "data" / "raw" / "physionet2016"
+_PRIMARY_PHYSIONET_DIR = PROJECT_ROOT / "data" / "raw" / "physionet2016"
+_FALLBACK_PHYSIONET_DIR = PROJECT_ROOT / "training data" / "training"
+RAW_PHYSIONET_DIR = _PRIMARY_PHYSIONET_DIR if _PRIMARY_PHYSIONET_DIR.exists() else _FALLBACK_PHYSIONET_DIR
+
 RAW_PASCAL_DIR = PROJECT_ROOT / "data" / "raw" / "pascal"
 PROCESSED_AUDIO_DIR = PROJECT_ROOT / "data" / "processed" / "audio"
 METADATA_PATH = PROJECT_ROOT / "data" / "processed" / "metadata.csv"
@@ -86,47 +89,23 @@ def ensure_dirs():
 def assign_splits(df: pd.DataFrame, group_col: str = "group",
                   train_frac: float = 0.70, val_frac: float = 0.15) -> pd.DataFrame:
     """
-    Assign train / val / test splits at the *group* level to avoid data
-    leakage.  Groups are shuffled, then allocated greedily to the split
-    whose current fraction is furthest below target.
-
-    Parameters
-    ----------
-    df : DataFrame
-        Must contain a ``group_col`` column identifying patient/recording
-        groups.
-    group_col : str
-        Column name to group by.
-    train_frac, val_frac : float
-        Target fractions; test gets the remainder.
-
-    Returns
-    -------
-    DataFrame with a ``split`` column added.
+    Assign train / val / test splits deterministically using MD5 hash of row ID
+    to ensure proportional 70% train / 15% val / 15% test split across all labels.
     """
-    groups = df[group_col].unique().tolist()
-    # Deterministic shuffle for reproducibility
     import hashlib
-    groups.sort(key=lambda g: hashlib.md5(str(g).encode()).hexdigest())
 
-    total = len(df)
-    split_counts = {"train": 0, "val": 0, "test": 0}
-    group_to_split = {}
-
-    for g in groups:
-        n = int((df[group_col] == g).sum())
-        # Pick the split that is most under-target
-        deficits = {
-            "train": train_frac - split_counts["train"] / max(total, 1),
-            "val": val_frac - split_counts["val"] / max(total, 1),
-            "test": (1 - train_frac - val_frac) - split_counts["test"] / max(total, 1),
-        }
-        chosen = max(deficits, key=deficits.get)
-        group_to_split[g] = chosen
-        split_counts[chosen] += n
+    def _split_row(row_id):
+        val = int(hashlib.md5(str(row_id).encode()).hexdigest(), 16) % 100
+        if val < int(train_frac * 100):
+            return "train"
+        elif val < int((train_frac + val_frac) * 100):
+            return "val"
+        else:
+            return "test"
 
     df = df.copy()
-    df["split"] = df[group_col].map(group_to_split)
+    df["split"] = df["id"].apply(_split_row)
+    return df
     return df
 
 
@@ -200,9 +179,9 @@ def read_physionet_labels(physionet_dir: Path) -> dict:
                 stem = parts[0].strip()
                 raw_label = parts[1].strip().lower()
 
-                # Handle numeric labels: -1 -> normal, 1 -> abnormal, 0 -> unsure
+                # Handle numeric labels: 1 -> normal, -1 -> abnormal, 0 -> unsure
                 if raw_label in ("-1", "1", "0"):
-                    raw_label = {"-1": "normal", "1": "abnormal", "0": "unsure"}.get(raw_label, raw_label)
+                    raw_label = {"1": "normal", "-1": "abnormal", "0": "unsure"}.get(raw_label, raw_label)
 
                 canonical = PHYSIONET_LABEL_MAP.get(raw_label, raw_label)
                 labels[stem] = canonical

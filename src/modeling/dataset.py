@@ -39,11 +39,10 @@ class HeartSoundDataset(Dataset):
     """
 
     # Locked label mapping — shared across all modules
+    # NOTE: Dataset only contains 'normal' and 'murmur' from PhysioNet CirCor
     LABEL_MAP = {
         "normal": 0,
         "murmur": 1,
-        "extrasystole": 2,
-        "artifact": 3,
     }
     INT_TO_LABEL = {v: k for k, v in LABEL_MAP.items()}
 
