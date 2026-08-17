@@ -246,13 +246,13 @@ if __name__ == "__main__":
     METADATA_CSV = "data/processed/metadata.csv"
     SAVE_PATH = "outputs/checkpoints/model.pt"
     FIGURES_DIR = "outputs/figures"
-    BATCH_SIZE = 16
-    NUM_EPOCHS = 25
+    BATCH_SIZE = 32
+    NUM_EPOCHS = 30
     LR = 5e-4
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_ds = HeartSoundDataset(METADATA_CSV, split="train")
+    train_ds = HeartSoundDataset(METADATA_CSV, split="train", augment=True)
     val_ds = HeartSoundDataset(METADATA_CSV, split="val")
 
     train_loader = DataLoader(

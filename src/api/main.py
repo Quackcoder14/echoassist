@@ -39,6 +39,7 @@ if _PROJECT_ROOT not in sys.path:
 from src.modeling.dataset import HeartSoundDataset
 from src.modeling.model import HeartSoundCNN, predict
 from src.modeling.gradcam import generate_gradcam, overlay_heatmap_on_spectrogram
+from src.modeling.explainability import explain as explain_audio
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ def _wav_to_spectrogram_tensor(wav_path: str) -> tuple:
 
     log_mel_norm = (log_mel - log_mel.min()) / (log_mel.max() - log_mel.min() + 1e-8)
     tensor = torch.tensor(log_mel_norm, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-    return tensor, log_mel_norm
+    return tensor, log_mel_norm, audio  # <-- also return raw audio for explainability
 
 
 def _check_audio_validity(wav_path: str) -> dict:
@@ -196,14 +197,37 @@ async def predict_endpoint(file: UploadFile):
 
     Returns
     -------
-    {"label": str, "confidence": float, "logits": list[float]}
+    {
+      "label": str,
+      "confidence": float,
+      "logits": list[float],
+      "explanation": {
+          "disturbance_index": float,
+          "overall_signal_quality": str,
+          "factors": list[dict]   -- biomarker contributions
+      }
+    }
     """
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
     try:
-        tensor, _ = _wav_to_spectrogram_tensor(tmp_path)
+        tensor, _, raw_audio = _wav_to_spectrogram_tensor(tmp_path)
         result = predict(_MODEL, tensor)
+
+        # Compute multi-factor acoustic explainability
+        try:
+            explanation = explain_audio(
+                audio=raw_audio,
+                sr=_SR,
+                predicted_class=result["label"],
+                confidence=result["confidence"],
+            )
+        except Exception as exc:
+            print(f"[explainability] Warning — failed to compute factors: {exc}")
+            explanation = {"disturbance_index": None, "factors": [], "overall_signal_quality": "unknown"}
+
+        result["explanation"] = explanation
     finally:
         os.unlink(tmp_path)
     return result
@@ -220,7 +244,7 @@ async def gradcam_endpoint(file: UploadFile):
         tmp.write(await file.read())
         tmp_path = tmp.name
     try:
-        tensor, log_mel = _wav_to_spectrogram_tensor(tmp_path)
+        tensor, log_mel, _ = _wav_to_spectrogram_tensor(tmp_path)
 
         # Run Grad-CAM (model must have gradients available)
         _MODEL.eval()

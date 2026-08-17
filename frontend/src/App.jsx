@@ -6,6 +6,7 @@ import WaveformView from './components/WaveformView';
 import ClassificationResult from './components/ClassificationResult';
 import GradCamOverlay from './components/GradCamOverlay';
 import SegmentationOverlay from './components/SegmentationOverlay';
+import FactorContributions from './components/FactorContributions';
 import MetricsPanel from './components/MetricsPanel';
 import { checkValidity, predict, pingBackend, setApiMode, getApiMode } from './api';
 import { Stethoscope, RefreshCw, AlertCircle, Check, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -338,6 +339,12 @@ export default function App() {
         {/* PAGE 4: EXPLAIN */}
         {currentStep === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Multi-Factor Acoustic Explainability */}
+            <FactorContributions
+              explanation={prediction?.explanation}
+              predictedClass={prediction?.label}
+            />
+
             {/* Cardiac Cycle Segmentation */}
             <SegmentationOverlay
               file={file}
@@ -378,7 +385,7 @@ export default function App() {
       <footer style={{ borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.8)', padding: '16px 24px', textAlign: 'center', fontSize: 11, color: 'var(--text-3)' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <span>EchoAssist System • PS-S01 Clinical Acoustic Decision Support</span>
-          <span>PhysioNet 2016 / PASCAL Heart Sound Challenge Pipeline</span>
+          <span>PASCAL · PhysioNet 2016 · CirCor DigiScope 2022 — Tri-Dataset Pipeline</span>
         </div>
       </footer>
     </div>
