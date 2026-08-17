@@ -434,6 +434,83 @@ body::before {
   border: 1px solid var(--border);
 }
 
+/* ─── Cardiac Cycle Segmentation Bar (Full-Width Edge-to-Edge) ──── */
+.seg-track-container {
+  width: 100%;
+  position: relative;
+  margin: 12px 0 16px 0;
+}
+
+.seg-track {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #E2E8F0;
+  border: 1.5px solid var(--border-strong);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.06);
+  position: relative;
+}
+
+.seg-block {
+  height: 100%;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.seg-block:hover {
+  filter: brightness(1.15);
+}
+
+.seg-block.active {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 10px rgba(255, 255, 255, 0.6);
+  filter: brightness(1.12);
+}
+
+.seg-block.s1 {
+  background: #10B981;
+}
+
+.seg-block.systole {
+  background: #F59E0B;
+}
+
+.seg-block.s2 {
+  background: #0EA5E9;
+}
+
+.seg-block.diastole {
+  background: #8B5CF6;
+}
+
+.seg-playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  background: #0F172A;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(15, 23, 42, 0.6);
+  pointer-events: none;
+  z-index: 10;
+  transition: left 0.05s linear;
+}
+
+.seg-playhead::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 9px;
+  background: #0F172A;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}
+
 /* ─── Mono Font ─────────────────────────────────────────────────── */
 .mono {
   font-family: 'JetBrains Mono', monospace;
