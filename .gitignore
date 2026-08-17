@@ -1,2 +1,11 @@
-data/raw/echo data/processed/*.wav echo outputs/checkpoints/*.pt echo outputs/checkpoints/*.pth echo __pycache__/ echo *.pyc echo .ipynb_checkpoints/ echo .env echo venv/ 
-!data/raw/pascal/.gitkeep 
+data/raw/
+data/processed/*.wav
+data/processed/audio/*.wav
+outputs/checkpoints/*.pt
+outputs/checkpoints/*.pth
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+venv/
+!data/raw/pascal/.gitkeep
