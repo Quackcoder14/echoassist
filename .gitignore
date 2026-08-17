@@ -1,11 +1,24 @@
-data/raw/
-data/processed/*.wav
-data/processed/audio/*.wav
-outputs/checkpoints/*.pt
-outputs/checkpoints/*.pth
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .ipynb_checkpoints/
+
+# Virtual environments
 .env
 venv/
+.venv/
+
+# Raw audio data (too large for git)
+data/raw/
+# Keep pascal placeholder
 !data/raw/pascal/.gitkeep
+
+# Processed audio files (too large for git, only metadata.csv is committed)
+data/processed/*.wav
+data/processed/audio/*.wav
+
+# Model checkpoints
+outputs/checkpoints/*.pt
+outputs/checkpoints/*.pth
