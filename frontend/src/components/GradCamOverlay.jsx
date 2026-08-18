@@ -3,7 +3,8 @@ import { Layers, ZoomIn, Info, AlertCircle } from 'lucide-react';
 import { getGradcamImageUrl } from '../api';
 import { animate } from 'animejs';
 
-export default function GradCamOverlay({ file, predictedLabel }) {
+export default function GradCamOverlay({ file, predictedLabel, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const [imageUrl, setImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -155,13 +156,21 @@ export default function GradCamOverlay({ file, predictedLabel }) {
             <span>Clinical Decision Rationale</span>
           </div>
           <p style={{ marginTop: 2 }}>
-            {predictedLabel === 'murmur'
-              ? 'Grad-CAM highlights elevated acoustic energy in the 200–500 Hz systolic region between S1 and S2, characteristic of turbulent blood flow across valves.'
-              : predictedLabel === 'extrasystole'
-              ? 'Grad-CAM highlights premature spectral pulse energy outside the baseline rhythm cycle, indicating ectopic ventricular contraction.'
-              : predictedLabel === 'artifact'
-              ? 'Grad-CAM identifies non-cardiac high-frequency sensor friction noise spanning across all acoustic channels.'
-              : 'Grad-CAM demonstrates focused attention on physiological S1 and S2 impulse bands with systolic/diastolic baseline silence.'}
+            {isLung
+              ? (predictedLabel === 'crackles'
+                ? 'Grad-CAM highlights elevated short-burst energy in the 100–500 Hz inspiratory band, characteristic of fluid-induced airway crackle patterns (rales).'
+                : predictedLabel === 'wheezes'
+                ? 'Grad-CAM identifies continuous high-frequency spectral activation across the expiratory phase, consistent with airway narrowing and wheeze generation.'
+                : predictedLabel === 'both'
+                ? 'Grad-CAM shows dual activation regions: short-burst inspiratory crackle energy and continuous expiratory wheeze frequency bands.'
+                : 'Grad-CAM demonstrates evenly distributed low-energy attention across the respiratory cycle, consistent with clear vesicular breath sounds.')
+              : (predictedLabel === 'murmur'
+                ? 'Grad-CAM highlights elevated acoustic energy in the 200–500 Hz systolic region between S1 and S2, characteristic of turbulent blood flow across valves.'
+                : predictedLabel === 'extrasystole'
+                ? 'Grad-CAM highlights premature spectral pulse energy outside the baseline rhythm cycle, indicating ectopic ventricular contraction.'
+                : predictedLabel === 'artifact'
+                ? 'Grad-CAM identifies non-cardiac high-frequency sensor friction noise spanning across all acoustic channels.'
+                : 'Grad-CAM demonstrates focused attention on physiological S1 and S2 impulse bands with systolic/diastolic baseline silence.')}
           </p>
         </div>
       </div>

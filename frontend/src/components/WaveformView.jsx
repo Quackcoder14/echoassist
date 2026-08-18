@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Volume2, ZoomIn } from 'lucide-react';
 import { animate } from 'animejs';
 
-export default function WaveformView({ file, onTimeUpdate, onPlayStateChange }) {
+export default function WaveformView({ file, onTimeUpdate, onPlayStateChange, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const canvasRef      = useRef(null);
   const wrapRef        = useRef(null);
   const audioCtxRef    = useRef(null);
@@ -359,8 +360,8 @@ export default function WaveformView({ file, onTimeUpdate, onPlayStateChange }) 
           </svg>
         </div>
         <div>
-          <h2>Phonocardiogram (PCG) Waveform</h2>
-          <p>Raw acoustic auscultation track — click to seek, drag to pan</p>
+          <h2>{isLung ? 'Lung Auscultation Waveform' : 'Phonocardiogram (PCG) Waveform'}</h2>
+          <p>{isLung ? 'Raw respiratory acoustic track — click to seek, drag to pan' : 'Raw acoustic auscultation track — click to seek, drag to pan'}</p>
         </div>
       </div>
 
@@ -407,7 +408,7 @@ export default function WaveformView({ file, onTimeUpdate, onPlayStateChange }) 
               disabled={!isReady}
             >
               {isPlaying ? <Pause size={14} fill="white" strokeWidth={0} /> : <Play size={14} fill="white" strokeWidth={0} />}
-              {isPlaying ? 'Pause' : 'Listen PCG'}
+              {isPlaying ? 'Pause' : (isLung ? 'Listen Lung Sound' : 'Listen PCG')}
             </button>
             <button
               className="btn btn-ghost"

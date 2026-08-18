@@ -37,15 +37,16 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from src.modeling.dataset import HeartSoundDataset
-from src.modeling.model import HeartSoundCNN, predict
+from src.modeling.model import HeartSoundCNN, RespiratoryCNN, predict
 from src.modeling.gradcam import generate_gradcam, overlay_heatmap_on_spectrogram
-from src.modeling.explainability import explain as explain_audio
+from src.modeling.explainability import explain as explain_audio, explain_respiratory
 
 
 # ---------------------------------------------------------------------------
 # Paths (relative to project root)
 # ---------------------------------------------------------------------------
 _CHECKPOINT_PATH = os.path.join(_PROJECT_ROOT, "outputs", "checkpoints", "model.pt")
+_RESP_CHECKPOINT_PATH = os.path.join(_PROJECT_ROOT, "outputs", "checkpoints", "respiratory_model_best.pth")
 _SEGMENTATIONS_PATH = os.path.join(_PROJECT_ROOT, "data", "processed", "segmentations.json")
 _METRICS_PATH = os.path.join(_PROJECT_ROOT, "outputs", "figures", "metrics.json")
 _FIGURES_DIR = os.path.join(_PROJECT_ROOT, "outputs", "figures")
@@ -76,28 +77,39 @@ app.mount("/static", StaticFiles(directory=_FIGURES_DIR), name="static")
 # Model — loaded once at startup
 # ---------------------------------------------------------------------------
 _MODEL: HeartSoundCNN = None
+_RESP_MODEL: RespiratoryCNN = None
 _DEVICE: torch.device = None
 
 
 @app.on_event("startup")
 async def load_model():
-    global _MODEL, _DEVICE
+    global _MODEL, _RESP_MODEL, _DEVICE
     _DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Load Heart Model
     if os.path.exists(_CHECKPOINT_PATH):
         ckpt = torch.load(_CHECKPOINT_PATH, map_location=_DEVICE)
         num_classes = ckpt.get("num_classes", len(HeartSoundDataset.LABEL_MAP))
         _MODEL = HeartSoundCNN(num_classes=num_classes).to(_DEVICE)
         _MODEL.load_state_dict(ckpt["model_state_dict"])
         _MODEL.eval()
-        print(f"[startup] Model loaded ({num_classes} classes) from {_CHECKPOINT_PATH} — device: {_DEVICE}")
+        print(f"[startup] Heart model loaded ({num_classes} classes) from {_CHECKPOINT_PATH} — device: {_DEVICE}")
     else:
         _MODEL = HeartSoundCNN(num_classes=len(HeartSoundDataset.LABEL_MAP)).to(_DEVICE)
         _MODEL.eval()
-        print(
-            f"[startup] WARNING — no checkpoint found at {_CHECKPOINT_PATH}. "
-            "Using untrained model weights. Run src/modeling/train.py first."
-        )
+        print(f"[startup] WARNING — no heart checkpoint found at {_CHECKPOINT_PATH}. Using untrained weights.")
+
+    # Load Respiratory Model
+    if os.path.exists(_RESP_CHECKPOINT_PATH):
+        _RESP_MODEL = RespiratoryCNN(num_classes=4).to(_DEVICE)
+        ckpt_resp = torch.load(_RESP_CHECKPOINT_PATH, map_location=_DEVICE)
+        _RESP_MODEL.load_state_dict(ckpt_resp)
+        _RESP_MODEL.eval()
+        print(f"[startup] Respiratory model loaded (4 classes) from {_RESP_CHECKPOINT_PATH}")
+    else:
+        _RESP_MODEL = RespiratoryCNN(num_classes=4).to(_DEVICE)
+        _RESP_MODEL.eval()
+        print(f"[startup] WARNING — no resp checkpoint found at {_RESP_CHECKPOINT_PATH}. Using untrained weights.")
 
 
 # ---------------------------------------------------------------------------
@@ -191,38 +203,36 @@ async def check_validity_endpoint(file: UploadFile):
 
 
 @app.post("/predict")
-async def predict_endpoint(file: UploadFile):
+async def predict_endpoint(file: UploadFile, organ: str = "heart"):
     """
-    Classify an uploaded heart sound recording.
-
-    Returns
-    -------
-    {
-      "label": str,
-      "confidence": float,
-      "logits": list[float],
-      "explanation": {
-          "disturbance_index": float,
-          "overall_signal_quality": str,
-          "factors": list[dict]   -- biomarker contributions
-      }
-    }
+    Classify an uploaded recording.
+    `organ` can be 'heart' or 'lung'.
     """
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
     try:
         tensor, _, raw_audio = _wav_to_spectrogram_tensor(tmp_path)
-        result = predict(_MODEL, tensor)
+        active_model = _MODEL if organ == "heart" else _RESP_MODEL
+        
+        result = predict(active_model, tensor, organ=organ)
 
         # Compute multi-factor acoustic explainability
         try:
-            explanation = explain_audio(
-                audio=raw_audio,
-                sr=_SR,
-                predicted_class=result["label"],
-                confidence=result["confidence"],
-            )
+            if organ == "heart":
+                explanation = explain_audio(
+                    audio=raw_audio,
+                    sr=_SR,
+                    predicted_class=result["label"],
+                    confidence=result["confidence"],
+                )
+            else:
+                explanation = explain_respiratory(
+                    audio=raw_audio,
+                    sr=_SR,
+                    predicted_class=result["label"],
+                    confidence=result["confidence"],
+                )
         except Exception as exc:
             print(f"[explainability] Warning — failed to compute factors: {exc}")
             explanation = {"disturbance_index": None, "factors": [], "overall_signal_quality": "unknown"}
@@ -234,21 +244,20 @@ async def predict_endpoint(file: UploadFile):
 
 
 @app.post("/gradcam")
-async def gradcam_endpoint(file: UploadFile):
+async def gradcam_endpoint(file: UploadFile, organ: str = "heart"):
     """
     Generate a Grad-CAM explanation overlay for an uploaded recording.
-
-    Returns a PNG image (media_type image/png).
     """
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
     try:
         tensor, log_mel, _ = _wav_to_spectrogram_tensor(tmp_path)
+        active_model = _MODEL if organ == "heart" else _RESP_MODEL
 
         # Run Grad-CAM (model must have gradients available)
-        _MODEL.eval()
-        heatmap = generate_gradcam(_MODEL, tensor)
+        active_model.eval()
+        heatmap = generate_gradcam(active_model, tensor)
         overlay = overlay_heatmap_on_spectrogram(log_mel, heatmap)
 
         # Encode overlay to PNG bytes in-memory

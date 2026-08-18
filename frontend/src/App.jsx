@@ -34,8 +34,19 @@ export default function App() {
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [generalError, setGeneralError] = useState(null);
   const [currentStep, setCurrentStep]   = useState(1);
+  const [organMode, setOrganMode]       = useState('lung'); // 'heart' | 'lung'
 
   const pageRef = useRef(null);
+
+  /* ── Apply organ theme to body ───────────────────────────────────── */
+  useEffect(() => {
+    document.body.setAttribute('data-theme', organMode);
+  }, [organMode]);
+
+  /* ── Initial theme ────────────────────────────────────────────────── */
+  useEffect(() => {
+    document.body.setAttribute('data-theme', 'lung');
+  }, []);
 
   /* ── Health check ──────────────────────────────────────────────── */
   useEffect(() => {
@@ -66,6 +77,13 @@ export default function App() {
     setApiMode(next); setModeState(next);
   };
 
+  const handleOrganChange = (mode) => {
+    setOrganMode(mode);
+    // Reset analysis when switching organ mode
+    setFile(null); setValidity(null); setPrediction(null);
+    setGeneralError(null); setAudioCurrentTime(0); setCurrentStep(1);
+  };
+
   const handleFileSelected = useCallback(async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile); setValidity(null); setPrediction(null);
@@ -76,13 +94,13 @@ export default function App() {
       setValidity(vr); setIsValidating(false);
       if (!vr?.valid) return;
       setIsPredicting(true);
-      const pr = await predict(selectedFile);
+      const pr = await predict(selectedFile, organMode);
       setPrediction(pr); setIsPredicting(false);
     } catch (err) {
       setGeneralError(err.message || 'Processing error.');
       setIsValidating(false); setIsPredicting(false);
     }
-  }, []);
+  }, [organMode]);
 
   const handleReset = () => {
     setFile(null); setValidity(null); setPrediction(null);
@@ -106,6 +124,8 @@ export default function App() {
         apiMode={apiMode}
         onToggleMode={handleToggleMode}
         onOpenMetrics={() => setIsMetricsOpen(true)}
+        organMode={organMode}
+        onOrganChange={handleOrganChange}
       />
 
       {/* ── Sticky Pipeline Stage Bar (directly below header) ── */}
@@ -206,6 +226,7 @@ export default function App() {
               onFileSelected={handleFileSelected}
               currentFile={file}
               isProcessing={isValidating || isPredicting}
+              organMode={organMode}
             />
             {file && (
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -232,7 +253,7 @@ export default function App() {
                 <span>Running acoustic signal quality checks…</span>
               </div>
             )}
-            <ValidityBanner validity={validity} />
+            <ValidityBanner validity={validity} organMode={organMode} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button className="btn btn-ghost" onClick={() => goToStep(1)}>
                 <ArrowLeft size={15} /> Back
@@ -254,11 +275,13 @@ export default function App() {
               file={file}
               onTimeUpdate={(t) => setAudioCurrentTime(t)}
               onPlayStateChange={(p) => setIsPlayingPcg(p)}
+              organMode={organMode}
             />
             <ClassificationResult
               result={prediction}
               isPredicting={isPredicting}
               isPlayingAudio={isPlayingPcg}
+              organMode={organMode}
             />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button className="btn btn-ghost" onClick={() => goToStep(2)}>
@@ -278,15 +301,20 @@ export default function App() {
             <FactorContributions
               explanation={prediction?.explanation}
               predictedClass={prediction?.label}
+              organMode={organMode}
             />
-            <SegmentationOverlay
-              file={file}
-              currentTime={audioCurrentTime}
-              totalDuration={validity?.duration_sec || 6.0}
-            />
+            {/* Only show cardiac segmentation for heart mode */}
+            {organMode === 'heart' && (
+              <SegmentationOverlay
+                file={file}
+                currentTime={audioCurrentTime}
+                totalDuration={validity?.duration_sec || 6.0}
+              />
+            )}
             <GradCamOverlay
               file={file}
               predictedLabel={prediction?.label || 'normal'}
+              organMode={organMode}
             />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button className="btn btn-ghost" onClick={() => goToStep(3)}>
@@ -301,12 +329,12 @@ export default function App() {
 
       </main>
 
-      <MetricsPanel isOpen={isMetricsOpen} onClose={() => setIsMetricsOpen(false)} />
+      <MetricsPanel isOpen={isMetricsOpen} onClose={() => setIsMetricsOpen(false)} organMode={organMode} />
 
       <footer style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', padding: '18px 32px' }}>
         <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12, color: 'var(--text-3)' }}>
           <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>EchoAssist · Clinical Acoustic Intelligence</span>
-          <span>PASCAL · PhysioNet 2016 · CirCor DigiScope 2022</span>
+          <span>{organMode === 'lung' ? 'ICBHI 2017 · HF Lung · RespiratoryDB' : 'PASCAL · PhysioNet 2016 · CirCor DigiScope 2022'}</span>
         </div>
       </footer>
     </div>

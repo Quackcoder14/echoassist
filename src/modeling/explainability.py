@@ -62,6 +62,27 @@ CLINICAL_RANGES = {
         "clinical_note_normal": "Clean acoustic signal. Minimal ambient noise or stethoscope movement artifacts.",
         "clinical_note_elevated": "Elevated high-frequency non-cardiac energy detected. Signal quality may be compromised by stethoscope friction, patient movement, or environmental noise.",
     },
+    "crackles_band_power": {
+        "normal_max": 20.0,
+        "label": "Discontinuous Crackle Energy",
+        "unit": "dB",
+        "clinical_note_normal": "Normal clear airways. No prominent short, explosive popping sounds detected.",
+        "clinical_note_elevated": "Elevated high-frequency popping sounds (crackles/rales). May indicate fluid in airways or airway collapse (e.g. Pneumonia, CHF, COPD).",
+    },
+    "wheeze_band_power": {
+        "normal_max": 25.0,
+        "label": "Continuous Wheeze Energy",
+        "unit": "dB",
+        "clinical_note_normal": "Normal airway flow. No prominent continuous musical tones detected.",
+        "clinical_note_elevated": "Elevated continuous musical sounds (wheezes). May indicate narrowed airways (e.g. Asthma, COPD).",
+    },
+    "respiratory_disturbance": {
+        "normal_max": 0.25,
+        "label": "Recording Noise & Disturbance",
+        "unit": "index",
+        "clinical_note_normal": "Clean respiratory acoustic signal.",
+        "clinical_note_elevated": "Elevated non-respiratory noise detected (friction, movement).",
+    }
 }
 
 
@@ -378,6 +399,137 @@ def explain(
         quality = "mild"
     else:
         quality = "high"
+
+    return {
+        "disturbance_index": round(di_value, 4),
+        "overall_signal_quality": quality,
+        "confidence": confidence,
+        "predicted_class": predicted_class,
+        "factors": factors,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Respiratory Explainability
+# ---------------------------------------------------------------------------
+
+def compute_crackles_energy(audio: np.ndarray, sr: int) -> dict:
+    """Discontinuous crackle energy typically in the 100-2000Hz band."""
+    crackles_db = compute_band_power(audio, sr, 100, 2000)
+    ref = CLINICAL_RANGES["crackles_band_power"]
+    # shift to positive excess for scoring
+    excess = max(0.0, min(crackles_db - ref["normal_max"] + 10.0, 30.0))
+    is_elevated = excess > 10.0
+
+    return {
+        "id": "crackles_band_power",
+        "name": ref["label"],
+        "category": "Pathology Indicator",
+        "measured_value": f"{crackles_db:.1f} dB",
+        "reference_range": f"< {ref['normal_max']} dB",
+        "status": "elevated" if is_elevated else "normal",
+        "score": excess,
+        "score_norm": min(excess / 30.0, 1.0),
+        "clinical_note": ref["clinical_note_elevated"] if is_elevated else ref["clinical_note_normal"],
+    }
+
+def compute_wheeze_energy(audio: np.ndarray, sr: int) -> dict:
+    """Continuous wheeze energy typically strongly harmonic in 400-2000Hz."""
+    wheeze_db = compute_band_power(audio, sr, 400, 2000)
+    ref = CLINICAL_RANGES["wheeze_band_power"]
+    excess = max(0.0, min(wheeze_db - ref["normal_max"] + 10.0, 30.0))
+    is_elevated = excess > 10.0
+
+    return {
+        "id": "wheeze_band_power",
+        "name": ref["label"],
+        "category": "Pathology Indicator",
+        "measured_value": f"{wheeze_db:.1f} dB",
+        "reference_range": f"< {ref['normal_max']} dB",
+        "status": "elevated" if is_elevated else "normal",
+        "score": excess,
+        "score_norm": min(excess / 30.0, 1.0),
+        "clinical_note": ref["clinical_note_elevated"] if is_elevated else ref["clinical_note_normal"],
+    }
+
+def compute_respiratory_disturbance(audio: np.ndarray, sr: int) -> dict:
+    ref = CLINICAL_RANGES["respiratory_disturbance"]
+    n_fft = min(512, len(audio))
+    D = np.abs(librosa.stft(audio, n_fft=n_fft, hop_length=n_fft // 4)) ** 2
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+    
+    total_energy = D.sum() + 1e-12
+    # Very high frequency noise above typical lung sounds
+    noise_mask = freqs >= min(2500, sr / 2 - 1)
+    noise_energy = D[noise_mask, :].sum()
+
+    disturbance = float(np.clip(noise_energy / total_energy, 0.0, 1.0))
+    is_elevated = disturbance > ref["normal_max"]
+
+    return {
+        "id": "respiratory_disturbance",
+        "name": ref["label"],
+        "category": "Signal Quality",
+        "measured_value": f"{disturbance:.4f} ratio",
+        "reference_range": f"< {ref['normal_max']} (clean)",
+        "status": "elevated" if is_elevated else "clean",
+        "score": disturbance,
+        "score_norm": min(disturbance / 0.5, 1.0),
+        "clinical_note": ref["clinical_note_elevated"] if is_elevated else ref["clinical_note_normal"],
+    }
+
+RESP_FACTOR_CLASS_WEIGHTS = {
+    "normal": {
+        "crackles_band_power": -0.40,
+        "wheeze_band_power": -0.40,
+        "respiratory_disturbance": -0.20,
+    },
+    "crackles": {
+        "crackles_band_power": 0.70,
+        "wheeze_band_power": -0.10,
+        "respiratory_disturbance": 0.20,
+    },
+    "wheezes": {
+        "crackles_band_power": -0.10,
+        "wheeze_band_power": 0.70,
+        "respiratory_disturbance": 0.20,
+    },
+    "both": {
+        "crackles_band_power": 0.40,
+        "wheeze_band_power": 0.40,
+        "respiratory_disturbance": 0.20,
+    }
+}
+
+def explain_respiratory(audio: np.ndarray, sr: int, predicted_class: str, confidence: float) -> dict:
+    biomarkers = [
+        compute_crackles_energy(audio, sr),
+        compute_wheeze_energy(audio, sr),
+        compute_respiratory_disturbance(audio, sr),
+    ]
+
+    weights = RESP_FACTOR_CLASS_WEIGHTS.get(predicted_class, RESP_FACTOR_CLASS_WEIGHTS["normal"])
+    
+    contributions = {}
+    for bm in biomarkers:
+        w = weights.get(bm["id"], 0.0)
+        contributions[bm["id"]] = w * bm["score_norm"]
+        
+    total_abs = sum(abs(v) for v in contributions.values()) + 1e-9
+    
+    factors = []
+    for bm in biomarkers:
+        pct = round((contributions[bm["id"]] / total_abs) * 100.0, 1)
+        factors.append({
+            **bm,
+            "contribution_pct": pct,
+            "impact": "supports" if pct > 0 else "opposes" if pct < 0 else "neutral",
+        })
+        
+    factors.sort(key=lambda x: abs(x["contribution_pct"]), reverse=True)
+    
+    di_value = next(f for f in factors if f["id"] == "respiratory_disturbance")["score"]
+    quality = "clean" if di_value < 0.15 else "mild" if di_value < 0.30 else "high"
 
     return {
         "disturbance_index": round(di_value, 4),

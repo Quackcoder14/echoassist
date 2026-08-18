@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { UploadCloud, FileAudio, CheckCircle2, Activity, Zap, VolumeX, Heart, ChevronRight, Sparkles } from 'lucide-react';
-import { PRESET_SAMPLES, createSyntheticWavBlob } from '../mockData';
+import { UploadCloud, FileAudio, CheckCircle2, Activity, Zap, VolumeX, Heart, ChevronRight, Sparkles, Wind, Droplets } from 'lucide-react';
+import { PRESET_SAMPLES, LUNG_PRESET_SAMPLES, createSyntheticWavBlob } from '../mockData';
 import { animate, stagger } from 'animejs';
 
 const PRESET_CONFIG = {
@@ -8,6 +8,13 @@ const PRESET_CONFIG = {
   murmur:       { icon: Activity,  color: '#D97706', bg: 'rgba(217,119,6,0.10)',  pill: 'pill-yellow', cls: 'preset-murmur'       },
   extrasystole: { icon: Zap,       color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', pill: 'pill-purple', cls: 'preset-extrasystole' },
   artifact:     { icon: VolumeX,   color: '#DC2626', bg: 'rgba(220,38,38,0.10)',  pill: 'pill-red',    cls: 'preset-artifact'     },
+};
+
+const LUNG_PRESET_CONFIG = {
+  normal:   { icon: Wind,     color: '#059669', bg: 'rgba(5,150,105,0.10)',  pill: 'pill-green',  cls: 'preset-normal'   },
+  crackles: { icon: Droplets, color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', pill: 'pill-blue',   cls: 'preset-murmur'   },
+  wheezes:  { icon: Zap,      color: '#7C3AED', bg: 'rgba(124,58,237,0.10)', pill: 'pill-purple', cls: 'preset-extrasystole' },
+  silent:   { icon: VolumeX,  color: '#DC2626', bg: 'rgba(220,38,38,0.10)',  pill: 'pill-red',    cls: 'preset-artifact' },
 };
 
 /* ── Animated ECG line in the hero ─────────────────────────────────── */
@@ -38,7 +45,8 @@ function EcgLine() {
   );
 }
 
-export default function FileUpload({ onFileSelected, currentFile, isProcessing }) {
+export default function FileUpload({ onFileSelected, currentFile, isProcessing, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
   const dropRef      = useRef(null);
@@ -105,14 +113,18 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing }
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
             <Sparkles size={14} color="var(--blue)" />
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--blue)' }}>
-              Clinical Heart Sound Intelligence
+              {isLung ? 'Clinical Lung Sound Intelligence' : 'Clinical Heart Sound Intelligence'}
             </span>
           </div>
           <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.045em', color: 'var(--text-1)', lineHeight: 1.12, maxWidth: 640 }}>
-            Turn a stethoscope recording into a clear next step.
+            {isLung
+              ? 'Turn a lung auscultation into a clear respiratory insight.'
+              : 'Turn a stethoscope recording into a clear next step.'}
           </h1>
           <p style={{ fontSize: 15.5, color: 'var(--text-2)', lineHeight: 1.72, maxWidth: 580 }}>
-            Upload any short heart sound recording. EchoAssist checks its acoustic quality, classifies the pattern, and explains the finding — in plain language, instantly.
+            {isLung
+              ? 'Upload any short lung sound recording. EchoAssist checks its acoustic quality, classifies respiratory patterns (crackles, wheezes), and explains the finding — in plain language, instantly.'
+              : 'Upload any short heart sound recording. EchoAssist checks its acoustic quality, classifies the pattern, and explains the finding — in plain language, instantly.'}
           </p>
 
           {/* Three feature chips */}
@@ -206,16 +218,16 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing }
               Demo Acoustic Presets
             </p>
             <p style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 2 }}>
-              Tap any card to load a synthesised heart sound sample instantly
+              {isLung ? 'Tap any card to load a synthesised lung sound sample instantly' : 'Tap any card to load a synthesised heart sound sample instantly'}
             </p>
           </div>
           <span className="pill pill-blue" style={{ fontSize: 11 }}>Real-time PCM synthesis</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14 }}>
-          {PRESET_SAMPLES.map((preset) => {
+          {(isLung ? LUNG_PRESET_SAMPLES : PRESET_SAMPLES).map((preset) => {
             const isSelected = currentFile?.name?.includes(preset.id);
-            const cfg = PRESET_CONFIG[preset.type] || PRESET_CONFIG.normal;
+            const cfg = (isLung ? LUNG_PRESET_CONFIG : PRESET_CONFIG)[preset.type] || (isLung ? LUNG_PRESET_CONFIG : PRESET_CONFIG).normal;
             const IconComp = cfg.icon;
             return (
               <button

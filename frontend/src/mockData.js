@@ -326,3 +326,41 @@ export const PRESET_SAMPLES = [
     badgeColor: 'rose'
   }
 ];
+
+/**
+ * Lung Preset Samples for instant demo
+ */
+export const LUNG_PRESET_SAMPLES = [
+  {
+    id: 'lung-normal',
+    name: 'Normal Breath Sound (ICBHI Normal)',
+    type: 'normal',
+    expectedLabel: 'normal',
+    description: 'Clear vesicular breath sounds with no crackles or wheezes (SNR > 20 dB)',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'lung-crackles',
+    name: 'Crackles / Rales (Pneumonia Pattern)',
+    type: 'crackles',
+    expectedLabel: 'crackles',
+    description: 'Short explosive popping sounds in early inspiration — fluid in small airways',
+    badgeColor: 'sky'
+  },
+  {
+    id: 'lung-wheezes',
+    name: 'Expiratory Wheeze (Asthma Pattern)',
+    type: 'wheezes',
+    expectedLabel: 'wheezes',
+    description: 'Continuous high-pitched musical tone during expiration — airway narrowing',
+    badgeColor: 'purple'
+  },
+  {
+    id: 'lung-silent',
+    name: 'Invalid / Low-SNR Silent Recording',
+    type: 'silent',
+    expectedLabel: 'unusable',
+    description: 'Simulates edge case: amplitude below noise threshold',
+    badgeColor: 'rose'
+  }
+];

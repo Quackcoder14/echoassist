@@ -67,14 +67,15 @@ export async function checkValidity(file) {
  * Send: multipart/form-data with .wav file under key 'file'
  * Receive: { label: string, confidence: number, logits: number[] }
  */
-export async function predict(file) {
+export async function predict(file, organ = 'heart') {
   if (apiMode === "mock") {
-    return mockPredict(file);
+    return mockPredict(file, organ);
   }
 
   try {
     const form = new FormData();
     form.append("file", file);
+    form.append("organ", organ);
     const res = await axios.post(`${BASE_URL}/predict`, form, {
       timeout: 15000,
       headers: { "Content-Type": "multipart/form-data" }
@@ -83,7 +84,7 @@ export async function predict(file) {
   } catch (err) {
     if (apiMode === "auto") {
       console.warn("Backend /predict unreachable, using dynamic acoustic estimation:", err.message);
-      return mockPredict(file);
+      return mockPredict(file, organ);
     }
     throw err;
   }
@@ -94,7 +95,7 @@ export async function predict(file) {
  * Send: multipart/form-data with .wav file under key 'file'
  * Receive: PNG image binary (blob) -> object URL string
  */
-export async function getGradcamImageUrl(file, predictedLabel = "murmur") {
+export async function getGradcamImageUrl(file, predictedLabel = "murmur", organ = 'heart') {
   if (apiMode === "mock") {
     const blob = await generateMockGradcamBlob(predictedLabel);
     return URL.createObjectURL(blob);
@@ -103,6 +104,7 @@ export async function getGradcamImageUrl(file, predictedLabel = "murmur") {
   try {
     const form = new FormData();
     form.append("file", file);
+    form.append("organ", organ);
     const res = await axios.post(`${BASE_URL}/gradcam`, form, {
       responseType: "blob",
       timeout: 15000,
@@ -186,7 +188,7 @@ async function mockCheckValidity(file) {
   };
 }
 
-async function mockPredict(file) {
+async function mockPredict(file, organ = 'heart') {
   await new Promise((r) => setTimeout(r, 450));
   const name = (file?.name || "").toLowerCase();
   const size = file?.size || 12345;
@@ -199,6 +201,20 @@ async function mockPredict(file) {
   }
   hash = Math.abs(hash + size);
 
+  // --- Respiratory mock ---
+  if (organ === 'lung') {
+    if (name.includes("crackle") || name.includes("rales") || name.includes("pneumonia")) {
+      return { label: "crackles", confidence: +(0.82 + (hash % 120) / 1000).toFixed(4), logits: [-1.2, 2.8, -2.1, -3.0] };
+    } else if (name.includes("wheeze") || name.includes("asthma") || name.includes("copd")) {
+      return { label: "wheezes", confidence: +(0.80 + (hash % 130) / 1000).toFixed(4), logits: [-1.5, -2.0, 2.7, -2.8] };
+    } else if (name.includes("both")) {
+      return { label: "both", confidence: +(0.76 + (hash % 140) / 1000).toFixed(4), logits: [-0.8, 1.5, 1.6, 2.4] };
+    }
+    const normalConf = 0.74 + (hash % 220) / 1000;
+    return { label: "normal", confidence: +normalConf.toFixed(4), logits: [2.4, -1.8, -2.0, -2.5] };
+  }
+
+  // --- Cardiac mock ---
   if (name.includes("murmur") || name.includes("stenosis")) {
     const conf = 0.84 + (hash % 120) / 1000;
     return {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, AlertOctagon, Zap, Heart, BarChart2, Activity } from 'lucide-react';
+import { CheckCircle2, AlertOctagon, Zap, Heart, BarChart2, Activity, Wind, Droplets } from 'lucide-react';
 import { animate } from 'animejs';
 
 const CLASS_CONFIG = {
@@ -37,6 +37,49 @@ const CLASS_CONFIG = {
   },
 };
 
+const LUNG_CLASS_CONFIG = {
+  normal: {
+    label:       'Normal Breath Sound',
+    description: 'Clear vesicular breath sounds with no crackles or wheezes detected. Airways appear unobstructed.',
+    tag:         'Normal Respiratory',
+    color:       'var(--green)',
+    pillClass:   'pill-green',
+    icon:        CheckCircle2,
+  },
+  crackles: {
+    label:       'Crackles / Rales Detected',
+    description: 'Short, explosive popping sounds during inspiration — may indicate fluid in airways (e.g. pneumonia, COPD).',
+    tag:         'Crackle Pattern',
+    color:       '#0EA5E9',
+    pillClass:   'pill-blue',
+    icon:        Droplets,
+  },
+  wheezes: {
+    label:       'Expiratory Wheeze Detected',
+    description: 'Continuous musical whistling during expiration — indicative of narrowed airways (e.g. asthma, COPD).',
+    tag:         'Wheeze Pattern',
+    color:       'var(--purple)',
+    pillClass:   'pill-purple',
+    icon:        Zap,
+  },
+  both: {
+    label:       'Mixed: Crackles + Wheezes',
+    description: 'Both popping (crackle) and whistling (wheeze) sounds detected. Complex or mixed airway pathology.',
+    tag:         'Mixed Pattern',
+    color:       'var(--yellow)',
+    pillClass:   'pill-yellow',
+    icon:        Wind,
+  },
+  artifact: {
+    label:       'Acoustic Artifact',
+    description: 'High ambient noise or stethoscope friction. Recording quality degraded.',
+    tag:         'Low Fidelity',
+    color:       'var(--red)',
+    pillClass:   'pill-red',
+    icon:        AlertOctagon,
+  },
+};
+
 const RADIUS = 42;
 const CIRC   = 2 * Math.PI * RADIUS;
 
@@ -49,14 +92,18 @@ function computeSoftmax(logits) {
   return exps.map(e => e / sumE);
 }
 
-export default function ClassificationResult({ result, isPredicting, isPlayingAudio }) {
+export default function ClassificationResult({ result, isPredicting, isPlayingAudio, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const wrapRef       = useRef(null);
   const barsRef       = useRef(null);
   const ringRef       = useRef(null);
   const animFrameRef  = useRef(null);
 
   const rawLogits = result?.logits || [2.5, 0.5];
-  const activeClassNames = rawLogits.length === 2 ? ['normal', 'murmur'] : ['normal', 'murmur', 'extrasystole', 'artifact'];
+  const activeConfig = isLung ? LUNG_CLASS_CONFIG : CLASS_CONFIG;
+  const activeClassNames = isLung
+    ? (rawLogits.length === 2 ? ['normal', 'crackles'] : ['normal', 'crackles', 'wheezes', 'both'])
+    : (rawLogits.length === 2 ? ['normal', 'murmur'] : ['normal', 'murmur', 'extrasystole', 'artifact']);
   const probs = computeSoftmax(rawLogits);
 
   const [liveConf, setLiveConf] = useState(null);
@@ -165,7 +212,7 @@ export default function ClassificationResult({ result, isPredicting, isPlayingAu
   if (!result) return null;
 
   const labelKey  = (result.label || 'normal').toLowerCase();
-  const cfg       = CLASS_CONFIG[labelKey] || CLASS_CONFIG.normal;
+  const cfg       = activeConfig[labelKey] || activeConfig.normal;
   const IconComp  = cfg.icon;
   const activeConf = liveConf ?? (result.confidence ?? probs[0]);
   const confPct   = (activeConf * 100).toFixed(1);
@@ -197,7 +244,7 @@ export default function ClassificationResult({ result, isPredicting, isPlayingAu
             color: 'var(--blue)',
           }}>
             <Activity size={13} className="animate-spin" style={{ animationDuration: '2s' }} />
-            <span>LIVE AUDITORY PACING</span>
+            <span>LIVE {isLung ? 'RESPIRATORY' : 'AUDITORY'} PACING</span>
           </div>
         )}
       </div>
@@ -269,7 +316,7 @@ export default function ClassificationResult({ result, isPredicting, isPlayingAu
             </div>
 
             {activeClassNames.map((cls, idx) => {
-              const itemCfg = CLASS_CONFIG[cls] || CLASS_CONFIG.normal;
+              const itemCfg = activeConfig[cls] || activeConfig.normal;
               const prob    = probs[idx] ?? 0;
               const probPct = (prob * 100).toFixed(1);
               const isTop   = cls === labelKey;

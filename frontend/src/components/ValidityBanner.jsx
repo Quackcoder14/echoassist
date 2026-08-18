@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Check, X, Clock, ShieldCheck, ShieldAlert, Activity, Volume2, Sparkles } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 
-export default function ValidityBanner({ validity }) {
+export default function ValidityBanner({ validity, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const wrapRef  = useRef(null);
   const cardsRef = useRef(null);
 
@@ -56,7 +57,7 @@ export default function ValidityBanner({ validity }) {
     {
       id: 'dur',
       title: 'Auscultation Duration',
-      subtitle: 'Cardiac Cycle Window',
+      subtitle: isLung ? 'Respiratory Cycle Window' : 'Cardiac Cycle Window',
       value: `${duration.toFixed(2)}s`,
       benchmark: '≥ 2.0s sufficient cycles',
       status: isPassed ? 'pass' : 'fail',

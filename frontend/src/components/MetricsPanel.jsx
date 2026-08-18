@@ -3,7 +3,8 @@ import { X, BarChart3 } from 'lucide-react';
 import { getMetrics } from '../api';
 import { animate } from 'animejs';
 
-export default function MetricsPanel({ isOpen, onClose }) {
+export default function MetricsPanel({ isOpen, onClose, organMode = 'heart' }) {
+  const isLung = organMode === 'lung';
   const [metrics, setMetrics] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const panelRef = useRef(null);
@@ -57,7 +58,9 @@ export default function MetricsPanel({ isOpen, onClose }) {
                 Model Evaluation & Validation Metrics
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                Cross-validated benchmark on PhysioNet 2016, PASCAL & CirCor DigiScope 2022
+                {isLung
+                  ? 'Cross-validated benchmark on ICBHI 2017 & HF Lung Respiratory Datasets'
+                  : 'Cross-validated benchmark on PhysioNet 2016, PASCAL & CirCor DigiScope 2022'}
               </p>
             </div>
           </div>
@@ -145,9 +148,9 @@ export default function MetricsPanel({ isOpen, onClose }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }} className="mono">
                   <div style={{ padding: 6, color: 'var(--text-3)', fontWeight: 600 }}>Pred →</div>
                   <div style={{ padding: 6, color: 'var(--green)', fontWeight: 600 }}>Norm</div>
-                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 600 }}>Murm</div>
-                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 600 }}>Extra</div>
-                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 600 }}>Artf</div>
+                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 600 }}>{isLung ? 'Crack' : 'Murm'}</div>
+                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 600 }}>{isLung ? 'Wheez' : 'Extra'}</div>
+                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 600 }}>{isLung ? 'Both' : 'Artf'}</div>
 
                   <div style={{ padding: 6, color: 'var(--green)', fontWeight: 700, textAlign: 'left' }}>Norm</div>
                   <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>432</div>
@@ -155,19 +158,19 @@ export default function MetricsPanel({ isOpen, onClose }) {
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>4</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
 
-                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 700, textAlign: 'left' }}>Murm</div>
+                  <div style={{ padding: 6, color: 'var(--yellow)', fontWeight: 700, textAlign: 'left' }}>{isLung ? 'Crack' : 'Murm'}</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>108</div>
                   <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>369</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>1</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>3</div>
 
-                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 700, textAlign: 'left' }}>Extra</div>
+                  <div style={{ padding: 6, color: 'var(--purple)', fontWeight: 700, textAlign: 'left' }}>{isLung ? 'Wheez' : 'Extra'}</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>2</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
                   <div style={{ padding: 8, background: 'var(--blue)', borderRadius: 6, color: '#fff', fontWeight: 700 }}>1</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
 
-                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 700, textAlign: 'left' }}>Artf</div>
+                  <div style={{ padding: 6, color: 'var(--red)', fontWeight: 700, textAlign: 'left' }}>{isLung ? 'Both' : 'Artf'}</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>0</div>
                   <div style={{ padding: 8, background: 'var(--surface-2)', borderRadius: 6, color: 'var(--text-3)' }}>1</div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Activity, CheckCircle2, AlertTriangle, HeartPulse, Info, ShieldCheck, Sparkles, Waves, Zap, Wind } from 'lucide-react';
+import { Activity, CheckCircle2, AlertTriangle, HeartPulse, Info, ShieldCheck, Sparkles, Waves, Zap, Wind, Droplets } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 
@@ -73,9 +73,63 @@ const OUTCOME = {
   },
 };
 
+const RESP_DETAILS = {
+  crackles_band_power: {
+    title: 'Crackle sounds (popping)',
+    plain: 'Short, explosive popping sounds usually caused by fluid or collapsed airways.',
+    good: 'No prominent crackle sounds detected in this recording.',
+    concern: 'Elevated popping/crackle sounds detected. May indicate fluid in the airways.',
+    icon: Droplets,
+    color: '#0EA5E9',
+  },
+  wheeze_band_power: {
+    title: 'Wheeze sounds (whistling)',
+    plain: 'Continuous musical or whistling sounds caused by narrowed or obstructed airways.',
+    good: 'No prominent wheeze sounds detected in this recording.',
+    concern: 'Continuous whistling wheeze sounds detected. May indicate airway narrowing (e.g. Asthma).',
+    icon: Wind,
+    color: '#7C3AED',
+  },
+  respiratory_disturbance: {
+    title: 'Recording clarity',
+    plain: 'Whether noise or movement could interfere with the reading.',
+    good: 'The recording is clear enough to interpret accurately.',
+    concern: 'Stethoscope friction or movement may be affecting the recording quality.',
+    icon: Activity,
+    color: '#DC2626',
+  },
+};
+
+const RESP_OUTCOME = {
+  normal: {
+    title: 'Clear airways detected',
+    description: 'The recording closely matches a normal respiratory sound pattern with no prominent crackles or wheezes.',
+    color: 'var(--green)',
+    note: 'This is a decision-support result, not a clinical diagnosis.',
+  },
+  crackles: {
+    title: 'Crackle pattern detected',
+    description: 'The recording contains short, explosive popping sounds (crackles/rales). This may be associated with fluid in the airways, pneumonia, or COPD.',
+    color: '#0EA5E9',
+    note: 'A clinician should interpret this alongside symptoms and a physical examination.',
+  },
+  wheezes: {
+    title: 'Wheeze pattern detected',
+    description: 'The recording contains continuous musical or whistling sounds (wheezes). This may indicate narrowed airways, such as in asthma or COPD.',
+    color: 'var(--purple)',
+    note: 'A clinician should interpret this alongside symptoms and a physical examination.',
+  },
+  both: {
+    title: 'Both crackles and wheezes detected',
+    description: 'The recording contains both popping (crackle) and whistling (wheeze) sounds, suggesting complex or mixed airway pathology.',
+    color: 'var(--yellow)',
+    note: 'This combination often warrants prompt clinical evaluation.',
+  },
+};
+
 /* ── Signal Card ──────────────────────────────────────────────────── */
-function SignalCard({ factor, index }) {
-  const detail = DETAILS[factor.id] || DETAILS.systolic_turbulence;
+function SignalCard({ factor, index, detailMap = DETAILS }) {
+  const detail = detailMap[factor.id] || DETAILS.systolic_turbulence || Object.values(detailMap)[0];
   const Icon = detail.icon;
   const reassuring = ['normal', 'clean', 'regular'].includes(factor.status);
   const amount = Math.max(8, Math.min(100, Math.abs(factor.contribution_pct || (factor.score_norm * 100) || 25)));
@@ -160,8 +214,9 @@ function SignalCard({ factor, index }) {
 }
 
 /* ── Main Component ───────────────────────────────────────────────── */
-export default function FactorContributions({ explanation, predictedClass }) {
+export default function FactorContributions({ explanation, predictedClass, organMode = 'heart' }) {
   const cardsRef = useRef(null);
+  const isLung = organMode === 'lung';
 
   useEffect(() => {
     if (!cardsRef.current || !explanation) return;
@@ -174,14 +229,16 @@ export default function FactorContributions({ explanation, predictedClass }) {
   if (!explanation) return null;
 
   const factors = explanation.factors || [];
-  const result = OUTCOME[predictedClass || explanation.predicted_class] || OUTCOME.normal;
+  const outcomeMap = isLung ? RESP_OUTCOME : OUTCOME;
+  const result = outcomeMap[predictedClass || explanation.predicted_class] || outcomeMap.normal;
+  const detailMap = isLung ? RESP_DETAILS : DETAILS;
   const confidence = ((explanation.confidence || 0.89) * 100).toFixed(0);
   const primary = factors
     .filter(f => !['normal', 'clean', 'regular'].includes(f.status))
     .sort((a, b) => Math.abs(b.contribution_pct || 0) - Math.abs(a.contribution_pct || 0))[0];
   const primaryText = primary
-    ? (DETAILS[primary.id] || DETAILS.systolic_turbulence).title.toLowerCase()
-    : 'a consistent combination of sound and timing markers';
+    ? (detailMap[primary.id] || DETAILS.systolic_turbulence).title.toLowerCase()
+    : isLung ? 'a consistent pattern of clear airway sounds' : 'a consistent combination of sound and timing markers';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -189,11 +246,11 @@ export default function FactorContributions({ explanation, predictedClass }) {
       {/* Section header */}
       <div className="section-label">
         <div className="step-badge" style={{ background: 'rgba(37,99,235,0.12)', borderColor: 'rgba(37,99,235,0.35)', color: 'var(--blue)' }}>
-          <HeartPulse size={14} />
+          {isLung ? <Wind size={14} /> : <HeartPulse size={14} />}
         </div>
         <div>
-          <h2>Here's what the recording is telling us</h2>
-          <p>Translated from acoustic data into a simple, evidence-led overview</p>
+          <h2>{isLung ? "Here's what the recording is telling us about your lungs" : "Here's what the recording is telling us"}</h2>
+          <p>{isLung ? 'Translated from respiratory acoustic data into a simple, evidence-led overview' : 'Translated from acoustic data into a simple, evidence-led overview'}</p>
         </div>
       </div>
 
@@ -209,7 +266,7 @@ export default function FactorContributions({ explanation, predictedClass }) {
           background: `${result.color}15`, border: `1.5px solid ${result.color}35`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: result.color,
         }}>
-          <HeartPulse size={24} />
+          {isLung ? <Wind size={24} /> : <HeartPulse size={24} />}
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 4 }}>
@@ -254,7 +311,7 @@ export default function FactorContributions({ explanation, predictedClass }) {
           <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>Each card explains one part of the heart sound in everyday terms.</p>
         </div>
         <span className="pill pill-blue">
-          <ShieldCheck size={11} /> 5 signals checked
+          <ShieldCheck size={11} /> {factors.length} signals checked
         </span>
       </div>
 
@@ -264,7 +321,7 @@ export default function FactorContributions({ explanation, predictedClass }) {
         style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}
       >
         {factors.map((factor, index) => (
-          <SignalCard key={factor.id} factor={factor} index={index} />
+          <SignalCard key={factor.id} factor={factor} index={index} detailMap={detailMap} />
         ))}
       </div>
 
@@ -276,7 +333,7 @@ export default function FactorContributions({ explanation, predictedClass }) {
         fontSize: 13, color: 'var(--text-3)', lineHeight: 1.55,
       }}>
         <Info size={15} color="var(--blue)" style={{ flexShrink: 0, marginTop: 1 }} />
-        <p><strong style={{ color: 'var(--text-2)' }}>Good to know:</strong> {result.note} The timeline below shows where these sounds occur in each heartbeat.</p>
+        <p><strong style={{ color: 'var(--text-2)' }}>Good to know:</strong> {result.note}{isLung ? '' : ' The timeline below shows where these sounds occur in each heartbeat.'}</p>
       </div>
 
     </div>

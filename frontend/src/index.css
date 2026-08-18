@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ──────────────────────────────────────────────── */
+/* ─── Design Tokens (Default = Lung/Blue mode) ───────────────────────── */
 :root {
   --bg:          #EEF5FF;
   --bg-alt:      #E6EFFF;
@@ -16,9 +16,16 @@
   --border-mid:   rgba(100,160,255,0.40);
   --border-strong:rgba(59,130,246,0.55);
 
+  --primary:      #2563EB;
+  --primary-10:   rgba(37,99,235,0.10);
+  --primary-20:   rgba(37,99,235,0.20);
+  --primary-rgb:  37,99,235;
+
+  /* kept for backward compat */
   --blue:       #2563EB;
   --blue-10:    rgba(37,99,235,0.10);
   --blue-20:    rgba(37,99,235,0.20);
+
   --green:      #059669;
   --green-10:   rgba(5,150,105,0.10);
   --yellow:     #D97706;
@@ -44,6 +51,52 @@
   --r-xl:  22px;
   --r-2xl: 28px;
   --r-full: 999px;
+
+  --theme-transition: background 0.55s cubic-bezier(.4,0,.2,1), border-color 0.55s cubic-bezier(.4,0,.2,1), box-shadow 0.55s cubic-bezier(.4,0,.2,1);
+}
+
+/* ─── Heart Theme (very very light red) ──────────────────────────────── */
+[data-theme="heart"] {
+  --bg:          #FFF5F5;
+  --bg-alt:      #FEF2F2;
+  --surface:     rgba(255,255,255,0.93);
+  --surface-2:   rgba(255,238,238,0.65);
+  --surface-3:   #FEE2E2;
+
+  --border:       rgba(255,185,185,0.55);
+  --border-mid:   rgba(239,68,68,0.30);
+  --border-strong:rgba(220,38,38,0.50);
+
+  --primary:      #DC2626;
+  --primary-10:   rgba(220,38,38,0.10);
+  --primary-20:   rgba(220,38,38,0.20);
+  --primary-rgb:  220,38,38;
+
+  --blue:        #DC2626;
+  --blue-10:     rgba(220,38,38,0.10);
+  --blue-20:     rgba(220,38,38,0.20);
+}
+
+/* ─── Lung Theme (very very light blue) — default ────────────────────── */
+[data-theme="lung"] {
+  --bg:          #EEF5FF;
+  --bg-alt:      #E6EFFF;
+  --surface:     rgba(255,255,255,0.92);
+  --surface-2:   rgba(232,241,255,0.60);
+  --surface-3:   #D5E4FF;
+
+  --border:       rgba(190,215,255,0.55);
+  --border-mid:   rgba(100,160,255,0.40);
+  --border-strong:rgba(59,130,246,0.55);
+
+  --primary:      #2563EB;
+  --primary-10:   rgba(37,99,235,0.10);
+  --primary-20:   rgba(37,99,235,0.20);
+  --primary-rgb:  37,99,235;
+
+  --blue:        #2563EB;
+  --blue-10:     rgba(37,99,235,0.10);
+  --blue-20:     rgba(37,99,235,0.20);
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────── */
@@ -58,17 +111,19 @@ body {
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: var(--theme-transition);
 }
 
-/* Soft ambient aura */
+/* Ambient aura — adapts per theme */
 body::before {
   content: '';
   position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 10% -5%, rgba(59,130,246,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 10% -5%, rgba(var(--primary-rgb),0.09) 0%, transparent 60%),
     radial-gradient(ellipse 50% 40% at 90% 105%, rgba(124,58,237,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 55% 50%, rgba(14,165,233,0.04) 0%, transparent 60%);
+    radial-gradient(ellipse 40% 30% at 55% 50%, rgba(var(--primary-rgb),0.04) 0%, transparent 60%);
   pointer-events: none; z-index: 0;
+  transition: var(--theme-transition);
 }
 #root { position: relative; z-index: 1; }
 
@@ -108,12 +163,13 @@ body::before {
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--blue); color: #fff;
-  box-shadow: 0 2px 8px rgba(37,99,235,.28);
+  background: var(--primary); color: #fff;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb),.28);
+  transition: all .2s cubic-bezier(.4,0,.2,1), background 0.4s ease;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #1D4ED8;
-  box-shadow: 0 4px 18px rgba(37,99,235,.38);
+  filter: brightness(0.9);
+  box-shadow: 0 4px 18px rgba(var(--primary-rgb),.38);
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }

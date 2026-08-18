@@ -96,20 +96,65 @@ class HeartSoundCNN(nn.Module):
         return logits
 
 
+class RespiratoryCNN(nn.Module):
+    @property
+    def last_conv(self):
+        return self.features[8]
+
+    def __init__(self, num_classes=4):
+        super().__init__()
+        self.num_classes = num_classes
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            # No final pool here so Grad-CAM works on spatial dims
+        )
+        
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Sequential(
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(32, num_classes)
+        )
+        self.last_conv_activations = None
+        
+    def forward(self, x):
+        x = self.features(x)
+        self.last_conv_activations = x
+        x = self.pool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+
+
 # ---------------------------------------------------------------------------
 # Inference helper — locked name/signature (used by FastAPI + dashboard)
 # ---------------------------------------------------------------------------
 
-def predict(model: HeartSoundCNN, input_tensor: torch.Tensor) -> dict:
+def predict(model: nn.Module, input_tensor: torch.Tensor, organ: str = 'heart') -> dict:
     """
     Run inference on a single pre-processed spectrogram tensor.
 
     Parameters
     ----------
-    model : HeartSoundCNN
-        A trained model (already on the appropriate device).
+    model : nn.Module
+        A trained model (HeartSoundCNN or RespiratoryCNN).
     input_tensor : torch.Tensor
         Shape (1, 1, n_mels, T) — batch dim included.
+    organ : str
+        'heart' or 'lung'. Determines the label mapping.
 
     Returns
     -------
@@ -126,7 +171,13 @@ def predict(model: HeartSoundCNN, input_tensor: torch.Tensor) -> dict:
         pred_idx = int(probs.argmax(dim=1))
         confidence = float(probs[0, pred_idx])
 
-    label = HeartSoundDataset.INT_TO_LABEL[pred_idx]
+    if organ == 'heart':
+        label = HeartSoundDataset.INT_TO_LABEL[pred_idx]
+    else:
+        # Respiratory labels: 0: normal, 1: crackles, 2: wheezes, 3: both
+        respiratory_labels = {0: 'normal', 1: 'crackles', 2: 'wheezes', 3: 'both'}
+        label = respiratory_labels.get(pred_idx, 'normal')
+
     return {
         "label": label,
         "confidence": round(confidence, 6),
