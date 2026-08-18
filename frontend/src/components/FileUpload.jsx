@@ -53,7 +53,7 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
   const heroRef      = useRef(null);
   const presetsRef   = useRef(null);
 
-  /* ── Entrance animations ── */
+  /* ── Entrance animations (re-run when organ mode changes) ── */
   useEffect(() => {
     if (heroRef.current) {
       animate(heroRef.current, { opacity: [0, 1], translateY: [24, 0], duration: 560, ease: 'outExpo', delay: 60 });
@@ -67,7 +67,7 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
         duration: 400, delay: stagger(60, { start: 340 }), ease: 'outCubic',
       });
     }
-  }, []);
+  }, [organMode]);
 
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
