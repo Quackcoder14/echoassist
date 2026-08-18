@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import FileUpload from './components/FileUpload';
 import ValidityBanner from './components/ValidityBanner';
@@ -6,192 +6,335 @@ import WaveformView from './components/WaveformView';
 import ClassificationResult from './components/ClassificationResult';
 import GradCamOverlay from './components/GradCamOverlay';
 import SegmentationOverlay from './components/SegmentationOverlay';
+import FactorContributions from './components/FactorContributions';
 import MetricsPanel from './components/MetricsPanel';
+import SplashScreen from './components/SplashScreen';
 import { checkValidity, predict, pingBackend, setApiMode, getApiMode } from './api';
-import { Stethoscope, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { animate, stagger } from 'animejs';
+
+const STAGES = [
+  { id: 'ingest',   num: 1, label: 'Ingest',   desc: 'Upload recording' },
+  { id: 'validate', num: 2, label: 'Validate',  desc: 'Signal quality check' },
+  { id: 'analyse',  num: 3, label: 'Analyse',   desc: 'Neural classification' },
+  { id: 'explain',  num: 4, label: 'Explain',   desc: 'Acoustic explainability' },
+];
 
 export default function App() {
-  const [file, setFile] = useState(null);
-  const [validity, setValidity] = useState(null);
-  const [prediction, setPrediction] = useState(null);
+  const [showSplash, setShowSplash]     = useState(true);
+  const [file, setFile]                 = useState(null);
+  const [validity, setValidity]         = useState(null);
+  const [prediction, setPrediction]     = useState(null);
   const [isValidating, setIsValidating] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [isPlayingPcg, setIsPlayingPcg] = useState(false);
   const [isBackendLive, setIsBackendLive] = useState(false);
-  const [apiMode, setModeState] = useState(getApiMode());
+  const [apiMode, setModeState]         = useState(getApiMode());
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [generalError, setGeneralError] = useState(null);
+  const [currentStep, setCurrentStep]   = useState(1);
+  const [organMode, setOrganMode]       = useState('lung'); // 'heart' | 'lung'
 
-  // Check backend health on mount and periodically
+  const pageRef = useRef(null);
+
+  /* ── Apply organ theme to body ───────────────────────────────────── */
   useEffect(() => {
-    let isMounted = true;
-    const checkLive = async () => {
-      const alive = await pingBackend();
-      if (isMounted) setIsBackendLive(alive);
-    };
+    document.body.setAttribute('data-theme', organMode);
+  }, [organMode]);
 
-    checkLive();
-    const interval = setInterval(checkLive, 8000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+  /* ── Initial theme ────────────────────────────────────────────────── */
+  useEffect(() => {
+    document.body.setAttribute('data-theme', 'lung');
   }, []);
 
+  /* ── Health check ──────────────────────────────────────────────── */
+  useEffect(() => {
+    let live = true;
+    const check = async () => { const a = await pingBackend(); if (live) setIsBackendLive(a); };
+    check();
+    const iv = setInterval(check, 8000);
+    return () => { live = false; clearInterval(iv); };
+  }, []);
+
+  /* ── Animate page content in on step change ─────────────────────── */
+  useEffect(() => {
+    if (!pageRef.current) return;
+    animate(pageRef.current, {
+      opacity: [0, 1], translateY: [18, 0],
+      duration: 420, ease: 'outCubic',
+    });
+  }, [currentStep]);
+
+  /* ── Navigation ─────────────────────────────────────────────────── */
+  const goToStep = (n) => {
+    setCurrentStep(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleToggleMode = () => {
-    const nextMode = apiMode === 'auto' ? 'mock' : 'auto';
-    setApiMode(nextMode);
-    setModeState(nextMode);
+    const next = apiMode === 'auto' ? 'mock' : 'auto';
+    setApiMode(next); setModeState(next);
+  };
+
+  const handleOrganChange = (mode) => {
+    setOrganMode(mode);
+    // Reset analysis when switching organ mode
+    setFile(null); setValidity(null); setPrediction(null);
+    setGeneralError(null); setAudioCurrentTime(0); setCurrentStep(1);
   };
 
   const handleFileSelected = useCallback(async (selectedFile) => {
     if (!selectedFile) return;
-
-    setFile(selectedFile);
-    setValidity(null);
-    setPrediction(null);
-    setGeneralError(null);
-    setAudioCurrentTime(0);
-    setIsValidating(true);
-
+    setFile(selectedFile); setValidity(null); setPrediction(null);
+    setGeneralError(null); setAudioCurrentTime(0); setIsValidating(true);
+    setCurrentStep(2);
     try {
-      // Step 1: Acoustic Validity Check FIRST
-      const validityRes = await checkValidity(selectedFile);
-      setValidity(validityRes);
-      setIsValidating(false);
-
-      // Step 2: If invalid, gracefully stop - do NOT call /predict
-      if (!validityRes || !validityRes.valid) {
-        return;
-      }
-
-      // Step 3: Run Classifier Prediction
+      const vr = await checkValidity(selectedFile);
+      setValidity(vr); setIsValidating(false);
+      if (!vr?.valid) return;
       setIsPredicting(true);
-      const predRes = await predict(selectedFile);
-      setPrediction(predRes);
-      setIsPredicting(false);
+      const pr = await predict(selectedFile, organMode);
+      setPrediction(pr); setIsPredicting(false);
     } catch (err) {
-      console.error('Processing pipeline error:', err);
-      setGeneralError(err.message || 'An unexpected error occurred during audio processing.');
-      setIsValidating(false);
-      setIsPredicting(false);
+      setGeneralError(err.message || 'Processing error.');
+      setIsValidating(false); setIsPredicting(false);
     }
-  }, []);
+  }, [organMode]);
 
   const handleReset = () => {
-    setFile(null);
-    setValidity(null);
-    setPrediction(null);
-    setGeneralError(null);
-    setAudioCurrentTime(0);
+    setFile(null); setValidity(null); setPrediction(null);
+    setGeneralError(null); setAudioCurrentTime(0); setCurrentStep(1);
   };
 
+  const maxUnlocked = !file ? 1
+    : isValidating ? 2
+    : validity && !validity.valid ? 2
+    : isPredicting ? 3
+    : prediction ? 4 : 3;
+
+  if (showSplash) return <SplashScreen onFinished={() => setShowSplash(false)} />;
+
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
-      {/* Top Navbar */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+
+      {/* ── Sticky Header ── */}
       <Header
         isBackendLive={isBackendLive}
         apiMode={apiMode}
         onToggleMode={handleToggleMode}
         onOpenMetrics={() => setIsMetricsOpen(true)}
+        organMode={organMode}
+        onOrganChange={handleOrganChange}
       />
 
-      {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Intro banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-cyan-950/40 via-slate-900/60 to-indigo-950/30 p-5 rounded-2xl border border-[var(--border-subtle)]">
-          <div className="space-y-1">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Stethoscope className="w-5 h-5 text-cyan-400" />
-              Phonocardiogram Acoustic Signal Interpreter
-            </h2>
-            <p className="text-xs text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-              Transforming raw cardiac waveforms into defensible, traceable, and revisitable clinical decision-support data with Grad-CAM salience and S1/S2 cycle segmentation.
-            </p>
+      {/* ── Sticky Pipeline Stage Bar (directly below header) ── */}
+      <div style={{
+        position: 'sticky', top: 56, zIndex: 40,
+        background: 'rgba(238,245,255,0.85)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: '0 2px 16px -4px rgba(37,99,235,0.08)',
+      }}>
+        <div style={{ maxWidth: 1360, margin: '0 auto', padding: '0 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
+            {STAGES.map((s, idx) => {
+              const isActive   = currentStep === s.num;
+              const isUnlocked = s.num <= maxUnlocked;
+              const isDone     = s.num < currentStep;
+              return (
+                <React.Fragment key={s.id}>
+                  <button
+                    onClick={() => isUnlocked && goToStep(s.num)}
+                    disabled={!isUnlocked}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '14px 20px', border: 'none', background: 'none',
+                      cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                      borderBottom: isActive ? '2.5px solid var(--blue)' : '2.5px solid transparent',
+                      transition: 'all .25s ease', fontFamily: 'inherit', flex: 1,
+                      justifyContent: 'center',
+                      opacity: isUnlocked ? 1 : 0.38,
+                    }}
+                  >
+                    <div style={{
+                      width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700,
+                      background: isDone ? 'var(--green)' : isActive ? 'var(--blue)' : 'rgba(37,99,235,0.10)',
+                      color: isDone || isActive ? '#fff' : 'var(--blue)',
+                      border: `1.5px solid ${isDone ? 'var(--green)' : isActive ? 'var(--blue)' : 'rgba(37,99,235,0.25)'}`,
+                      boxShadow: isActive ? '0 0 12px rgba(37,99,235,0.35)' : 'none',
+                      transition: 'all .3s ease',
+                    }}>
+                      {isDone ? <Check size={12} /> : s.num}
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em',
+                        color: isActive ? 'var(--blue)' : isDone ? 'var(--green)' : 'var(--text-3)',
+                        transition: 'color .25s ease',
+                      }}>{s.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 1 }}>{s.desc}</div>
+                    </div>
+                  </button>
+                  {idx < STAGES.length - 1 && (
+                    <div style={{
+                      width: 1, margin: '10px 0',
+                      background: 'var(--border)',
+                    }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+
+            {/* Right: Reset button */}
+            {file && (
+              <button
+                onClick={handleReset}
+                className="btn btn-ghost btn-sm"
+                style={{ margin: 'auto 0 auto 16px', flexShrink: 0 }}
+              >
+                <RefreshCw size={13} /> New
+              </button>
+            )}
           </div>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="btn-secondary text-xs self-start sm:self-center"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>New Analysis</span>
-            </button>
-          )}
         </div>
+      </div>
 
-        {/* Pipeline Flow Area */}
-        <div className="space-y-5">
-          {/* 1. File Upload Dropzone & Sample Presets */}
-          <FileUpload
-            onFileSelected={handleFileSelected}
-            currentFile={file}
-            isProcessing={isValidating || isPredicting}
-          />
+      {/* ── Main Content ── */}
+      <main style={{ flex: 1, maxWidth: 1360, width: '100%', margin: '0 auto', padding: '32px 28px 72px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {/* Validation Loading Indicator */}
-          {isValidating && (
-            <div className="glass-card p-4 flex items-center justify-center gap-3 text-xs font-mono text-cyan-300 animate-pulse">
-              <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-              <span>Running noise-reduction & acoustic SNR validity checks...</span>
+        {/* Error Banner */}
+        {generalError && (
+          <div style={{
+            padding: '14px 20px', borderRadius: 'var(--r-lg)',
+            background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.25)',
+            display: 'flex', alignItems: 'center', gap: 12,
+            color: 'var(--red)', fontSize: 14,
+          }}>
+            <AlertCircle size={18} />
+            <span>{generalError}</span>
+          </div>
+        )}
+
+        {/* ── PAGE 1: INGEST ── */}
+        {currentStep === 1 && (
+          <div ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <FileUpload
+              onFileSelected={handleFileSelected}
+              currentFile={file}
+              isProcessing={isValidating || isPredicting}
+              organMode={organMode}
+            />
+            {file && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-lg" onClick={() => goToStep(2)} style={{ gap: 10 }}>
+                  <span>Continue to Validation</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PAGE 2: VALIDATE ── */}
+        {currentStep === 2 && (
+          <div ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {isValidating && (
+              <div className="card" style={{
+                padding: '36px', textAlign: 'center',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
+                fontSize: 15, color: 'var(--blue)',
+                background: 'linear-gradient(135deg,rgba(255,255,255,.94),rgba(235,244,255,.92))',
+              }}>
+                <div style={{ width: 22, height: 22, border: '2.5px solid rgba(37,99,235,0.15)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite', flexShrink: 0 }} />
+                <span>Running acoustic signal quality checks…</span>
+              </div>
+            )}
+            <ValidityBanner validity={validity} organMode={organMode} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button className="btn btn-ghost" onClick={() => goToStep(1)}>
+                <ArrowLeft size={15} /> Back
+              </button>
+              {validity?.valid && (
+                <button className="btn btn-primary btn-lg" onClick={() => goToStep(3)} disabled={isPredicting} style={{ gap: 10 }}>
+                  <span>{isPredicting ? 'Analysing…' : 'Proceed to Analysis'}</span>
+                  <ArrowRight size={16} />
+                </button>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* General Pipeline Error */}
-          {generalError && (
-            <div className="glass-card border-rose-500/40 bg-rose-950/30 p-4 rounded-xl flex items-center gap-3 text-xs text-rose-300">
-              <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
-              <span>{generalError}</span>
+        {/* ── PAGE 3: ANALYSE ── */}
+        {currentStep === 3 && (
+          <div ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <WaveformView
+              file={file}
+              onTimeUpdate={(t) => setAudioCurrentTime(t)}
+              onPlayStateChange={(p) => setIsPlayingPcg(p)}
+              organMode={organMode}
+            />
+            <ClassificationResult
+              result={prediction}
+              isPredicting={isPredicting}
+              isPlayingAudio={isPlayingPcg}
+              organMode={organMode}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button className="btn btn-ghost" onClick={() => goToStep(2)}>
+                <ArrowLeft size={15} /> Back
+              </button>
+              <button className="btn btn-primary btn-lg" onClick={() => goToStep(4)} disabled={!prediction} style={{ gap: 10 }}>
+                <span>View Full Explanation</span>
+                <ArrowRight size={16} />
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* 2. Validity Result Banner (Valid vs Graceful Halt) */}
-          <ValidityBanner validity={validity} />
-
-          {/* 3. Downstream Components (Displayed only if validity === true) */}
-          {validity?.valid && file && (
-            <div className="space-y-5 animate-fadeIn">
-              {/* Primary Row: Classification Result & Confidence Logits */}
-              <ClassificationResult
-                result={prediction}
-                isPredicting={isPredicting}
-              />
-
-              {/* Waveform Visualization (WaveSurfer.js) */}
-              <WaveformView
-                file={file}
-                onTimeUpdate={(time) => setAudioCurrentTime(time)}
-              />
-
-              {/* S1 / Systole / S2 / Diastole Cardiac Cycle Segmentation */}
+        {/* ── PAGE 4: EXPLAIN ── */}
+        {currentStep === 4 && (
+          <div ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <FactorContributions
+              explanation={prediction?.explanation}
+              predictedClass={prediction?.label}
+              organMode={organMode}
+            />
+            {/* Only show cardiac segmentation for heart mode */}
+            {organMode === 'heart' && (
               <SegmentationOverlay
                 file={file}
                 currentTime={audioCurrentTime}
-                totalDuration={validity.duration_sec || 6.0}
+                totalDuration={validity?.duration_sec || 6.0}
               />
-
-              {/* Explainability: Grad-CAM Mel-Spectrogram Heatmap */}
-              <GradCamOverlay
-                file={file}
-                predictedLabel={prediction?.label || 'normal'}
-              />
+            )}
+            <GradCamOverlay
+              file={file}
+              predictedLabel={prediction?.label || 'normal'}
+              organMode={organMode}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button className="btn btn-ghost" onClick={() => goToStep(3)}>
+                <ArrowLeft size={15} /> Back
+              </button>
+              <button className="btn btn-ghost" onClick={handleReset} style={{ color: 'var(--blue)', borderColor: 'var(--border-strong)' }}>
+                <RefreshCw size={14} /> Analyze New Recording
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
       </main>
 
-      {/* Evaluation Metrics Modal */}
-      <MetricsPanel
-        isOpen={isMetricsOpen}
-        onClose={() => setIsMetricsOpen(false)}
-      />
+      <MetricsPanel isOpen={isMetricsOpen} onClose={() => setIsMetricsOpen(false)} organMode={organMode} />
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--border-subtle)] bg-[rgba(9,13,22,0.9)] py-4 text-center text-xs text-slate-500 font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>EchoAssist System • PS-S01 Clinical Acoustic Decision Support</span>
-          <span>PhysioNet 2016 / PASCAL Heart Sound Challenge Pipeline</span>
+      <footer style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', padding: '18px 32px' }}>
+        <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12, color: 'var(--text-3)' }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>EchoAssist · Clinical Acoustic Intelligence</span>
+          <span>{organMode === 'lung' ? 'ICBHI 2017 · HF Lung · RespiratoryDB' : 'PASCAL · PhysioNet 2016 · CirCor DigiScope 2022'}</span>
         </div>
       </footer>
     </div>

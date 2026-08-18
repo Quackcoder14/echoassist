@@ -14,7 +14,6 @@ venv/
 data/raw/
 # Keep pascal placeholder
 !data/raw/pascal/.gitkeep
-
 # Processed audio files (too large for git, only metadata.csv is committed)
 data/processed/*.wav
 data/processed/audio/*.wav
@@ -22,3 +21,12 @@ data/processed/audio/*.wav
 # Model checkpoints
 outputs/checkpoints/*.pt
 outputs/checkpoints/*.pth
+
+# Other ignores
+training data/
+training data/**
+*archive*
+*.zip
+*.tar*
+frontend/node_modules/
+frontend/dist/

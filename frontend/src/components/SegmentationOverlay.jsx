@@ -1,37 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { Clock, Scissors, Info } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Scissors, Activity, Clock, PlayCircle, Sparkles } from 'lucide-react';
 import { getSegmentation } from '../api';
+import { animate } from 'animejs';
 
-const SEGMENT_COLORS = {
+const SEGMENT_CONFIG = {
   S1: {
-    bg: 'bg-emerald-500/30',
-    border: 'border-emerald-400/60',
-    text: 'text-emerald-300',
-    label: 'S1 (Mitral/Tricuspid Closure)'
+    name: 'S1',
+    laymanName: 'S1 ("Lub" Sound)',
+    desc: 'Tricuspid & Mitral valves closing (ventricles start pumping)',
+    color: '#10B981', // Original Emerald for text
+    barColor: '#D1FAE5', // Near-white Emerald for bar
+    bg: 'rgba(16, 185, 129, 0.12)',
+    border: 'rgba(16, 185, 129, 0.35)',
+    pillClass: 'pill-green',
   },
   systole: {
-    bg: 'bg-amber-500/25',
-    border: 'border-amber-400/50',
-    text: 'text-amber-300',
-    label: 'Systole (Ventricular Ejection)'
+    name: 'Systole',
+    laymanName: 'Systole (Pumping Phase)',
+    desc: 'Ventricles contract, pushing blood to body & lungs',
+    color: '#F59E0B', // Original Amber for text
+    barColor: '#FEF3C7', // Near-white Amber for bar
+    bg: 'rgba(245, 158, 11, 0.12)',
+    border: 'rgba(245, 158, 11, 0.35)',
+    pillClass: 'pill-yellow',
   },
   S2: {
-    bg: 'bg-cyan-500/30',
-    border: 'border-cyan-400/60',
-    text: 'text-cyan-300',
-    label: 'S2 (Aortic/Pulmonic Closure)'
+    name: 'S2',
+    laymanName: 'S2 ("Dub" Sound)',
+    desc: 'Aortic & Pulmonic valves closing (end of contraction)',
+    color: '#0EA5E9', // Original Sky for text
+    barColor: '#E0F2FE', // Near-white Sky for bar
+    bg: 'rgba(14, 165, 233, 0.12)',
+    border: 'rgba(14, 165, 233, 0.35)',
+    pillClass: 'pill-blue',
   },
   diastole: {
-    bg: 'bg-indigo-500/20',
-    border: 'border-indigo-400/40',
-    text: 'text-indigo-300',
-    label: 'Diastole (Ventricular Filling)'
-  }
+    name: 'Diastole',
+    laymanName: 'Diastole (Refilling Phase)',
+    desc: 'Heart muscle relaxes and refills with oxygenated blood',
+    color: '#8B5CF6', // Original Violet for text
+    barColor: '#EDE9FE', // Near-white Violet for bar
+    bg: 'rgba(139, 92, 246, 0.12)',
+    border: 'rgba(139, 92, 246, 0.35)',
+    pillClass: 'pill-purple',
+  },
 };
 
 export default function SegmentationOverlay({ file, currentTime = 0, totalDuration = 6.0 }) {
   const [segments, setSegments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const wrapRef = useRef(null);
 
   useEffect(() => {
     if (!file) {
@@ -61,107 +79,182 @@ export default function SegmentationOverlay({ file, currentTime = 0, totalDurati
     };
   }, [file, totalDuration]);
 
+  useEffect(() => {
+    if (wrapRef.current && segments.length > 0) {
+      animate(wrapRef.current, {
+        opacity: [0, 1],
+        translateY: [16, 0],
+        duration: 420,
+        ease: 'outCubic',
+      });
+    }
+  }, [segments]);
+
   if (isLoading) {
     return (
-      <div className="glass-card p-4 text-xs font-mono text-cyan-400 text-center animate-pulse">
-        Segmenting cardiac cycles (S1 / Systole / S2 / Diastole)...
+      <div className="card" style={{ padding: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>
+        <div style={{ display: 'inline-block', width: 20, height: 20, border: '2px solid rgba(14, 165, 233, 0.2)', borderTopColor: '#0EA5E9', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginRight: 10, verticalAlign: 'middle' }} />
+        Mapping clinical Springer HMM heart cycle phases (S1 / Systole / S2 / Diastole)...
       </div>
     );
   }
 
-  if (!segments || segments.length === 0) {
-    return null; // Graceful empty state as specified in harsitaa.md
-  }
+  if (!segments || segments.length === 0) return null;
 
-  // Find active segment based on current audio time
-  const activeSegment = segments.find(
-    ([_, start, end]) => currentTime >= start && currentTime < end
-  );
+  // Compute exact timeline extent so segments span 100% of the bar edge-to-edge
+  const maxEnd = segments[segments.length - 1][2] || totalDuration || 6.0;
+  const activeSegment = segments.find(([_, start, end]) => currentTime >= start && currentTime < end);
+  const activeCfg = activeSegment ? (SEGMENT_CONFIG[activeSegment[0]] || SEGMENT_CONFIG.S1) : null;
 
-  const duration = totalDuration || (segments[segments.length - 1] ? segments[segments.length - 1][2] : 6.0);
+  // Calculate cycle statistics
+  const s1Count = segments.filter(s => s[0] === 'S1').length;
 
   return (
-    <div className="glass-card p-5 space-y-3.5">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20">
-            <Scissors className="w-4 h-4" />
+    <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: 12, opacity: 0 }}>
+      {/* Section Header */}
+      <div className="section-label" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="step-badge" style={{ background: 'rgba(14, 165, 233, 0.12)', borderColor: 'rgba(14, 165, 233, 0.35)', color: '#0EA5E9' }}>
+            <Scissors size={13} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white tracking-wide">
-              Cardiac Cycle Segmentation (Springer HMM Pipeline)
-            </h3>
-            <p className="text-[11px] text-[var(--text-secondary)]">
-              Temporal segmentation of S1 (lub), Systole, S2 (dub), and Diastole phases
-            </p>
+            <h2>Cardiac Cycle Timeline Segmentation</h2>
+            <p>Precise temporal timeline of your heart's 4 natural pumping and resting phases</p>
           </div>
         </div>
 
-        {/* Current Active Phase Badge */}
-        {activeSegment && (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-900/90 border border-slate-700/80">
-            <Clock className="w-3 h-3 text-cyan-400" />
-            <span className="text-slate-400">Current:</span>
-            <span className="font-bold uppercase text-cyan-300">{activeSegment[0]}</span>
-            <span className="text-[10px] text-slate-500">
-              ({activeSegment[1]}s–{activeSegment[2]}s)
+        {activeSegment && activeCfg && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 12px',
+            borderRadius: 'var(--r-md)',
+            background: activeCfg.bg,
+            border: `1px solid ${activeCfg.border}`,
+            fontSize: 11,
+            fontWeight: 700,
+            color: activeCfg.color,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeCfg.color }} />
+            <span>CURRENT: {activeCfg.laymanName}</span>
+            <span className="mono" style={{ opacity: 0.85, marginLeft: 2 }}>
+              ({activeSegment[1].toFixed(2)}s – {activeSegment[2].toFixed(2)}s)
             </span>
           </div>
         )}
       </div>
 
-      {/* Visual Timeline Track */}
-      <div className="relative h-14 bg-slate-950 rounded-xl p-1.5 border border-slate-800/80 overflow-hidden flex">
-        {segments.map(([name, start, end], index) => {
-          const widthPct = ((end - start) / duration) * 100;
-          const config = SEGMENT_COLORS[name] || SEGMENT_COLORS.S1;
-          const isActive = currentTime >= start && currentTime < end;
-
-          return (
-            <div
-              key={index}
-              style={{ width: `${widthPct}%` }}
-              className={`h-full relative flex items-center justify-center text-[10px] font-mono font-bold uppercase transition-all border-r border-slate-900 ${
-                config.bg
-              } ${config.text} ${
-                isActive ? 'ring-2 ring-white z-10 brightness-125 shadow-lg' : 'opacity-85'
-              }`}
-              title={`${name}: ${start}s - ${end}s`}
-            >
-              <span className="truncate px-0.5">{name}</span>
-            </div>
-          );
-        })}
-
-        {/* Current Playhead Indicator */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-white shadow-md z-20 pointer-events-none transition-all duration-75"
-          style={{ left: `${(currentTime / duration) * 100}%` }}
-        />
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-400">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded bg-emerald-500" />
-            <span>S1 (lub)</span>
+      <div className="card" style={{ padding: '32px 36px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        
+        {/* Timeline Header Info */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-2)' }}>
+              Continuous Cycle Flow
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              • {s1Count} full cardiac cycles mapped
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded bg-amber-500" />
-            <span>Systole</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded bg-cyan-500" />
-            <span>S2 (dub)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded bg-indigo-500" />
-            <span>Diastole</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="mono" style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--surface-2)', padding: '3px 9px', borderRadius: 6, border: '1px solid var(--border)' }}>
+              <Clock size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+              Total Duration: {maxEnd.toFixed(2)}s
+            </span>
           </div>
         </div>
-        <span className="text-[10px] font-mono text-slate-500">Duration: {duration.toFixed(1)}s</span>
+
+        {/* ─── Full-Width Colored Segmentation Bar (No text inside, spreads 100%) ─── */}
+        <div className="seg-track-container">
+          <div className="seg-track">
+            {segments.map(([name, start, end], index) => {
+              const widthPct = ((end - start) / maxEnd) * 100;
+              const isActive = currentTime >= start && currentTime < end;
+              const cfg = SEGMENT_CONFIG[name] || SEGMENT_CONFIG.S1;
+
+              return (
+                <div
+                  key={index}
+                  className={`seg-block ${name.toLowerCase()} ${isActive ? 'active' : ''}`}
+                  style={{
+                    width: `${widthPct}%`,
+                    backgroundColor: cfg.barColor,
+                    borderRight: '1px solid #fff',
+                    opacity: 1, // Bar is already near-white, keep it fully opaque for clean look
+                  }}
+                  title={`${cfg.laymanName}: ${start.toFixed(2)}s to ${end.toFixed(2)}s`}
+                />
+              );
+            })}
+
+            {/* Playhead Marker */}
+            <div
+              className="seg-playhead"
+              style={{
+                left: `${Math.min(100, Math.max(0, (currentTime / maxEnd) * 100))}%`,
+              }}
+            />
+          </div>
+
+          {/* Time axis tick markers */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: 'var(--text-3)' }} className="mono">
+            <span>0.0s</span>
+            <span>{(maxEnd * 0.25).toFixed(1)}s</span>
+            <span>{(maxEnd * 0.50).toFixed(1)}s</span>
+            <span>{(maxEnd * 0.75).toFixed(1)}s</span>
+            <span>{maxEnd.toFixed(1)}s</span>
+          </div>
+        </div>
+
+        {/* ─── Nearby Intuitive Phase Legend (Layman's terms) ─── */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10 }}>
+            Phase Legend & What They Mean
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            {Object.entries(SEGMENT_CONFIG).map(([key, cfg]) => {
+              const isPhaseActive = activeSegment && activeSegment[0] === key;
+
+              return (
+                <div
+                  key={key}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--r-lg)',
+                    background: isPhaseActive ? cfg.bg : 'var(--surface-2)',
+                    border: `1.5px solid ${isPhaseActive ? cfg.color : 'var(--border)'}`,
+                    boxShadow: isPhaseActive ? `0 4px 14px ${cfg.bg}` : 'none',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: cfg.color,
+                      boxShadow: `0 0 6px ${cfg.color}`,
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
+                      {cfg.laymanName}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.45 }}>
+                    {cfg.desc}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
       </div>
     </div>
   );
