@@ -18,9 +18,12 @@ data/raw/
 data/processed/*.wav
 data/processed/audio/*.wav
 
-# Model checkpoints
+# Model checkpoints — large experimental checkpoints excluded, but deployed models kept
 outputs/checkpoints/*.pt
 outputs/checkpoints/*.pth
+# Exception: deployed production models MUST be in git so Render can serve them
+!outputs/checkpoints/model.pt
+!outputs/checkpoints/respiratory_model_best.pth
 
 # Other ignores
 training data/
