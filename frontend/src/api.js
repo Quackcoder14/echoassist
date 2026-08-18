@@ -5,7 +5,8 @@ import {
   MOCK_METRICS
 } from "./mockData";
 
-export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const rawUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const BASE_URL = rawUrl.replace(/\/+$/, ""); // Strip trailing slashes safely
 
 // Global mode setting: 'auto' (tries live backend, falls back to mock), 'mock' (forced mock), 'live' (strict live)
 let apiMode = "auto";
@@ -23,11 +24,12 @@ export function getApiMode() {
  */
 export async function pingBackend() {
   try {
-    const res = await axios.get(`${BASE_URL}/health`, { timeout: 2000 });
+    // Increased timeout to 10s because Render free tier spins down and can take time to wake up
+    const res = await axios.get(`${BASE_URL}/health`, { timeout: 10000 });
     return res.status === 200 && res.data?.status === "ok";
   } catch {
     try {
-      const resDocs = await axios.get(`${BASE_URL}/docs`, { timeout: 2000 });
+      const resDocs = await axios.get(`${BASE_URL}/docs`, { timeout: 10000 });
       return resDocs.status >= 200 && resDocs.status < 400;
     } catch {
       return false;
