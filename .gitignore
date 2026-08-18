@@ -31,5 +31,10 @@ training data/**
 *archive*
 *.zip
 *.tar*
+
+# Local docs and demo files (keep out of git)
+*.md
+demo_dataset/
+generate_demo_dataset.py
 frontend/node_modules/
 frontend/dist/
