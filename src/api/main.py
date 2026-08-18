@@ -24,6 +24,8 @@ import tempfile
 import cv2
 import numpy as np
 import torch
+# Limit PyTorch threads to prevent OOM crashes on Render's 512MB free tier
+torch.set_num_threads(1)
 import librosa
 
 from fastapi import FastAPI, UploadFile, HTTPException
