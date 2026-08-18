@@ -5,7 +5,7 @@ import {
   MOCK_METRICS
 } from "./mockData";
 
-export const BASE_URL = "http://localhost:8000";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // Global mode setting: 'auto' (tries live backend, falls back to mock), 'mock' (forced mock), 'live' (strict live)
 let apiMode = "auto";

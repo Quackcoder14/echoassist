@@ -1,5 +1,14 @@
+fastapi
+uvicorn[standard]
+torch
+torchvision
+torchaudio
 librosa
 noisereduce
 soundfile
 pandas
 numpy
+opencv-python-headless
+scikit-learn
+matplotlib
+python-multipart
