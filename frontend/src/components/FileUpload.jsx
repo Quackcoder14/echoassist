@@ -91,11 +91,12 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
       {/* ── Top Section: Hero + Dropzone side-by-side ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 28, alignItems: 'stretch' }}>
+      <div className="mobile-upload-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 28, alignItems: 'stretch' }}>
         
         {/* ── Hero block ── */}
         <div
           ref={heroRef}
+          className="mobile-upload-hero"
           style={{
             background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(229,242,255,0.90) 100%)',
             border: '1px solid rgba(190,215,255,0.60)',
@@ -144,6 +145,7 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
         {/* ── Drop zone ── */}
         <div
           ref={dropRef}
+          className="mobile-dropzone"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -201,6 +203,7 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
 
       {/* ── Demo presets ── */}
       <div
+        className="mobile-preset-section"
         style={{
           background: 'rgba(255,255,255,0.78)',
           backdropFilter: 'blur(24px) saturate(180%)',
@@ -224,7 +227,7 @@ export default function FileUpload({ onFileSelected, currentFile, isProcessing, 
           <span className="pill pill-blue" style={{ fontSize: 11 }}>Real-time PCM synthesis</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14 }}>
+        <div className="mobile-preset-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14 }}>
           {(isLung ? LUNG_PRESET_SAMPLES : PRESET_SAMPLES).map((preset) => {
             const isSelected = currentFile?.name?.includes(preset.id);
             const cfg = (isLung ? LUNG_PRESET_CONFIG : PRESET_CONFIG)[preset.type] || (isLung ? LUNG_PRESET_CONFIG : PRESET_CONFIG).normal;

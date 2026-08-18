@@ -129,7 +129,7 @@ export default function App() {
       />
 
       {/* ── Sticky Pipeline Stage Bar (directly below header) ── */}
-      <div style={{
+      <div className="mobile-stage-bar" style={{
         position: 'sticky', top: 56, zIndex: 40,
         background: 'rgba(238,245,255,0.85)',
         backdropFilter: 'blur(20px) saturate(180%)',
@@ -204,7 +204,7 @@ export default function App() {
       </div>
 
       {/* ── Main Content ── */}
-      <main style={{ flex: 1, maxWidth: 1360, width: '100%', margin: '0 auto', padding: '32px 28px 72px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <main className="mobile-main" style={{ flex: 1, maxWidth: 1360, width: '100%', margin: '0 auto', padding: '32px 28px 72px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
         {/* Error Banner */}
         {generalError && (
@@ -332,7 +332,7 @@ export default function App() {
       <MetricsPanel isOpen={isMetricsOpen} onClose={() => setIsMetricsOpen(false)} organMode={organMode} />
 
       <footer style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', padding: '18px 32px' }}>
-        <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12, color: 'var(--text-3)' }}>
+        <div className="mobile-footer" style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12, color: 'var(--text-3)' }}>
           <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>EchoAssist · Clinical Acoustic Intelligence</span>
           <span>{organMode === 'lung' ? 'ICBHI 2017 · HF Lung · RespiratoryDB' : 'PASCAL · PhysioNet 2016 · CirCor DigiScope 2022'}</span>
         </div>

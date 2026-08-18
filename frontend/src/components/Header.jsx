@@ -36,7 +36,7 @@ export default function Header({ isBackendLive, apiMode, onToggleMode, onOpenMet
         transition: 'border-color 0.5s ease',
       }}
     >
-      <div style={{
+      <div className="mobile-header-inner" style={{
         maxWidth: 1360,
         margin: '0 auto',
         padding: '0 24px',
@@ -47,7 +47,7 @@ export default function Header({ isBackendLive, apiMode, onToggleMode, onOpenMet
         gap: 16,
       }}>
         {/* Brand */}
-        <div className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0 }}>
+        <div className="nav-item mobile-header-brand" style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10,
             background: primaryBg,
@@ -77,7 +77,7 @@ export default function Header({ isBackendLive, apiMode, onToggleMode, onOpenMet
         </div>
 
         {/* Right controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="mobile-header-controls" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 
           {/* ── Organ Toggle ── */}
           <div
@@ -132,7 +132,7 @@ export default function Header({ isBackendLive, apiMode, onToggleMode, onOpenMet
 
           {/* Non-diagnostic disclaimer */}
           <div
-            className="nav-item"
+            className="nav-item mobile-disclaimer"
             style={{
               opacity: 0,
               display: 'flex', alignItems: 'center', gap: 5,
@@ -143,7 +143,7 @@ export default function Header({ isBackendLive, apiMode, onToggleMode, onOpenMet
             }}
           >
             <ShieldAlert size={11} />
-            <span>Decision Support — Non-Diagnostic</span>
+            <span className="mobile-disclaimer-text">Decision Support — Non-Diagnostic</span>
           </div>
 
           {/* Backend status */}

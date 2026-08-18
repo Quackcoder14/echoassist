@@ -339,3 +339,145 @@ body::before {
 
 @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
 .spin { animation: spin 0.8s linear infinite; }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE RESPONSIVE — all breakpoints
+   Everything below only kicks in at ≤ 768px.
+   Desktop styles above are untouched.
+═══════════════════════════════════════════════════ */
+
+/* ── Safe area for notched phones (iPhone X+) ── */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Tablet: loosen the hero grid ── */
+@media (max-width: 1024px) {
+  .hero-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Base font */
+  html { font-size: 15px; }
+
+  /* ── Header ── */
+  .mobile-header-inner {
+    padding: 0 14px !important;
+    height: auto !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+  .mobile-header-brand { flex: 1 1 auto; }
+  .mobile-header-controls {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+  /* Hide long disclaimer text on mobile */
+  .mobile-disclaimer-text { display: none !important; }
+  /* Shrink pills in header */
+  .mobile-header-controls .btn-ghost { font-size: 11px !important; padding: 4px 9px !important; }
+
+  /* ── Pipeline stage bar ── */
+  .mobile-stage-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mobile-stage-bar::-webkit-scrollbar { display: none; }
+  .mobile-stage-bar > div { min-width: 460px; } /* allow horizontal scroll on tiny screens */
+
+  /* ── Main content padding ── */
+  .mobile-main {
+    padding: 16px 14px 80px !important; /* 80px bottom for iOS home bar */
+    gap: 18px !important;
+  }
+
+  /* ── FileUpload: hero + dropzone ── */
+  .mobile-upload-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .mobile-upload-hero {
+    padding: 28px 22px !important;
+  }
+  .mobile-upload-hero h1 {
+    font-size: 24px !important;
+  }
+  .mobile-upload-hero p {
+    font-size: 14px !important;
+  }
+  .mobile-dropzone {
+    padding: 36px 24px !important;
+  }
+
+  /* ── Preset grid: 2 col on mobile ── */
+  .mobile-preset-section { padding: 20px 18px !important; }
+  .mobile-preset-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .preset-tile { padding: 14px 14px !important; }
+
+  /* ── Card ── */
+  .card { border-radius: var(--r-lg) !important; }
+
+  /* ── Validity banner ── */
+  .mobile-validity { padding: 16px 18px !important; }
+
+  /* ── Classification result ── */
+  .mobile-result-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+
+  /* ── Waveform ── */
+  .mobile-waveform { padding: 14px 14px !important; }
+
+  /* ── Factor contributions ── */
+  .mobile-factors-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+
+  /* ── Metrics modal ── */
+  .modal-panel {
+    padding: 20px 16px !important;
+    border-radius: var(--r-xl) !important;
+    max-height: 85vh !important;
+  }
+
+  /* ── Footer ── */
+  .mobile-footer {
+    flex-direction: column !important;
+    gap: 4px !important;
+    text-align: center;
+    padding: 14px 16px !important;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* ── Segmentation bar ── */
+  .seg-track { height: 36px !important; }
+
+  /* ── Grad-CAM ── */
+  .mobile-gradcam { padding: 14px !important; }
+
+  /* ── Section labels ── */
+  .section-label h2 { font-size: 17px !important; }
+
+  /* ── Buttons ── */
+  .btn-lg { font-size: 14px !important; padding: 12px 20px !important; }
+
+  /* ── Grid-2col override ── */
+  .grid-2col { grid-template-columns: 1fr !important; }
+
+  /* ── Splash ── */
+  .splash { padding: 20px; }
+}
+
+/* ── Very small phones (< 380px) ── */
+@media (max-width: 380px) {
+  .mobile-preset-grid { grid-template-columns: 1fr !important; }
+  .mobile-header-controls .mobile-disclaimer { display: none !important; }
+}
+
