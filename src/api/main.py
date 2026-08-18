@@ -28,7 +28,7 @@ import torch
 torch.set_num_threads(1)
 import librosa
 
-from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi import FastAPI, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -205,7 +205,7 @@ async def check_validity_endpoint(file: UploadFile):
 
 
 @app.post("/predict")
-async def predict_endpoint(file: UploadFile, organ: str = "heart"):
+async def predict_endpoint(file: UploadFile, organ: str = Form("heart")):
     """
     Classify an uploaded recording.
     `organ` can be 'heart' or 'lung'.
@@ -246,7 +246,7 @@ async def predict_endpoint(file: UploadFile, organ: str = "heart"):
 
 
 @app.post("/gradcam")
-async def gradcam_endpoint(file: UploadFile, organ: str = "heart"):
+async def gradcam_endpoint(file: UploadFile, organ: str = Form("heart")):
     """
     Generate a Grad-CAM explanation overlay for an uploaded recording.
     """
